@@ -1,50 +1,139 @@
-# Welcome to your Expo app 👋
+# Reminder Timer App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native timer reminder app built with Expo, featuring clean UI design, notification scheduling, and persistent data storage.
 
-## Get started
+## Features
 
-1. Install dependencies
+- ⏰ **Timer Management**: Create, edit, and manage multiple timers
+- 🔔 **Smart Notifications**: Schedule notifications based on frequency (daily, weekdays, weekends)
+- 🎨 **Theme Support**: Light, dark, and system theme options
+- 💾 **Data Persistence**: Timers are saved locally using AsyncStorage
+- 📱 **Cross-Platform**: Works on iOS and Android
+- 🎯 **Clean UI**: Modern, intuitive interface following React Native best practices
 
+## Tech Stack
+
+- **React Native** with Expo
+- **TypeScript** for type safety
+- **Context API** for state management
+- **AsyncStorage** for data persistence
+- **Expo Notifications** for push notifications
+- **Lucide React Native** for icons
+- **Date-fns** for date manipulation
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── ui/                 # Reusable UI components
+│   │   ├── Button.tsx
+│   │   ├── Input.tsx
+│   │   ├── Switch.tsx
+│   │   ├── Card.tsx
+│   │   └── IconButton.tsx
+│   ├── screens/            # Screen components
+│   │   ├── HomeScreen.tsx
+│   │   ├── CreateScreen.tsx
+│   │   └── SettingsScreen.tsx
+│   └── App.tsx            # Main app component
+├── context/
+│   └── AppContext.tsx     # Global state management
+├── services/
+│   └── NotificationService.ts  # Notification handling
+├── types/
+│   └── index.ts           # TypeScript type definitions
+└── app/
+    └── _layout.tsx        # App entry point
+```
+
+## Key Features Implementation
+
+### State Management
+- Uses React Context API with useReducer for predictable state updates
+- Centralized state management for timers, settings, and UI state
+- Automatic data persistence with AsyncStorage
+
+### Notification System
+- Requests notification permissions on app start
+- Schedules notifications based on timer frequency
+- Handles different notification patterns (daily, weekdays, weekends)
+- Proper cleanup when timers are deleted or disabled
+
+### Theme System
+- Support for light, dark, and system themes
+- Dynamic theme switching with persistent storage
+- Consistent theming across all components
+
+### Component Architecture
+- Reusable UI components following DRY principles
+- Consistent styling and behavior
+- Type-safe props with TypeScript
+- Proper accessibility support
+
+## Getting Started
+
+1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+2. **Start the development server**:
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+3. **Run on device/simulator**:
 ```bash
-npm run reset-project
-```
+   npm run ios     # iOS simulator
+   npm run android # Android emulator
+   ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Usage
 
-## Learn more
+1. **Create a Timer**:
+   - Tap the "+" button on the home screen
+   - Enter timer name and duration
+   - Set notification times
+   - Choose frequency (daily, weekdays, weekends)
+   - Tap "Create Timer"
 
-To learn more about developing your project with Expo, look at the following resources:
+2. **Manage Timers**:
+   - Toggle timers on/off using the switch
+   - View scheduled times and frequency
+   - Timers are automatically saved
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+3. **Settings**:
+   - Change theme (light/dark/system)
+   - Manage notification permissions
+   - View app information
 
-## Join the community
+## Permissions
 
-Join our community of developers creating universal apps.
+The app requests the following permissions:
+- **Notifications**: Required for timer reminders
+- **Vibration**: For notification feedback
+- **Wake Lock**: To ensure notifications are delivered
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Best Practices Implemented
+
+- **TypeScript**: Full type safety throughout the app
+- **DRY Principle**: Reusable components and utilities
+- **Separation of Concerns**: Clear separation between UI, business logic, and data
+- **Error Handling**: Proper error handling and user feedback
+- **Performance**: Optimized rendering and state updates
+- **Accessibility**: Proper accessibility labels and navigation
+- **Code Organization**: Clean, maintainable code structure
+
+## Future Enhancements
+
+- Custom frequency patterns
+- Timer categories and tags
+- Export/import functionality
+- Widget support
+- Analytics and insights
+- Cloud sync capabilities
+
+## License
+
+MIT License - feel free to use this project as a starting point for your own timer apps!
