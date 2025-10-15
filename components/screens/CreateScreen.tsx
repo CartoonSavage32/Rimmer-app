@@ -1,20 +1,20 @@
 import { Plus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { NewTimer, TimerDuration } from '../../types';
 import { durationToMinutes, minutesToDuration } from '../../utils/timeUtils';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { DurationPicker } from '../ui/DurationPicker';
 import { FrequencyPicker } from '../ui/FrequencyPicker';
-import { IconButton } from '../ui/IconButton';
+import { Header } from '../ui/Header';
 import { Input } from '../ui/Input';
 import { TimePicker } from '../ui/TimePicker';
 
 export const CreateScreen: React.FC = () => {
   const { state, addTimer, setScreen, setTimeFormat } = useApp();
   const { isDark, settings } = state;
+  const colors = getDesignColors(isDark);
 
   const [newTimer, setNewTimer] = useState<NewTimer>({
     name: '',
@@ -104,150 +104,233 @@ export const CreateScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          New Timer
-        </Text>
-        <IconButton
-          icon={<X size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-          onPress={() => setScreen('home')}
-          variant="ghost"
-        />
-      </View>
+    <View style={[designStyles.screen.container, { backgroundColor: colors.bg }]}>
+      {/* Header */}
+      <Header
+        title="New Timer"
+        onBackPress={() => setScreen('home')}
+        isDark={isDark}
+      />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.section}>
-          <Input
-            label="Timer Name"
-            value={newTimer.name}
-            onChangeText={(text) => setNewTimer({ ...newTimer, name: text })}
-            placeholder="e.g., Morning Meditation"
-            error={errors.name}
-          />
-        </Card>
+      {/* Content */}
+      <ScrollView style={designStyles.screen.content} showsVerticalScrollIndicator={false}>
+        <View style={[designStyles.screen.formContent, { paddingTop: designStyles.spacing.xl }]}>
+          {/* Timer Name */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              TIMER NAME
+            </Text>
+            <Input
+              value={newTimer.name}
+              onChangeText={(text) => setNewTimer({ ...newTimer, name: text })}
+              placeholder="e.g., Morning Meditation"
+              error={errors.name}
+              style={StyleSheet.flatten([designStyles.screen.input, { backgroundColor: colors.inputBg, borderColor: colors.border }])}
+              inputStyle={{ color: colors.text }}
+            />
+          </View>
 
-        <DurationPicker
-          value={duration}
-          onChange={handleDurationChange}
-          isDark={isDark}
-        />
+          {/* Duration */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              DURATION
+            </Text>
+            <DurationPicker
+              duration={duration}
+              onDurationChange={(newDuration) => {
+                const timerDuration: TimerDuration = {
+                  ...newDuration,
+                  milliseconds: 0
+                };
+                handleDurationChange(timerDuration);
+              }}
+              isDark={isDark}
+            />
+          </View>
 
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Notification Times
-          </Text>
-          
-          {newTimer.times.map((time, index) => (
-            <View key={index} style={styles.timeRow}>
-              <TimePicker
-                value={time}
-                onChange={(newTime) => handleTimeChange(index, newTime)}
-                format={settings.timeFormat}
-                onFormatChange={setTimeFormat}
-                isDark={isDark}
-                error={typeof errors.times === 'string' ? errors.times : undefined}
-                showFormatToggle={index === 0}
-              />
-              {newTimer.times.length > 1 && (
-                <IconButton
-                  icon={<X size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-                  onPress={() => handleRemoveTime(index)}
-                  variant="ghost"
-                  size="small"
-                />
-              )}
+          {/* Notification Times */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              NOTIFICATION TIMES
+            </Text>
+            <View style={styles.timesContainer}>
+              {newTimer.times.map((time, index) => (
+                <View key={index} style={styles.timeRow}>
+                  <TimePicker
+                    time={time}
+                    onTimeChange={(newTime) => handleTimeChange(index, newTime)}
+                    isDark={isDark}
+                    showFormatToggle={index === 0}
+                    onFormatChange={setTimeFormat}
+                    timeFormat={settings.timeFormat}
+                  />
+                  {newTimer.times.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveTime(index)}
+                      style={[styles.removeTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    >
+                      <X size={20} color={colors.text} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              
+              <TouchableOpacity
+                onPress={handleAddTime}
+                style={[styles.addTimeButton, { borderColor: colors.border }]}
+              >
+                <Plus size={20} color={colors.text} />
+                <Text style={[styles.addTimeText, { color: colors.text }]}>Add Time</Text>
+              </TouchableOpacity>
             </View>
-          ))}
+          </View>
 
-          <Button
-            title="Add Time"
-            onPress={handleAddTime}
-            variant="outline"
-            icon={<Plus size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-            style={styles.addTimeButton}
-          />
-        </Card>
-
-        <FrequencyPicker
-          frequency={newTimer.frequency}
-          customDays={newTimer.customDays}
-          onChange={handleFrequencyChange}
-          isDark={isDark}
-        />
+          {/* Frequency */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              FREQUENCY
+            </Text>
+            <FrequencyPicker
+              frequency={newTimer.frequency}
+              customDays={newTimer.customDays?.map(String) || []}
+              onFrequencyChange={(frequency) => handleFrequencyChange(frequency as any)}
+              onCustomDaysChange={(customDays) => setNewTimer({ ...newTimer, customDays: customDays.map(Number) })}
+              isDark={isDark}
+            />
+          </View>
+        </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button
-          title="Create Timer"
+      {/* Footer */}
+      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        <TouchableOpacity
           onPress={handleCreate}
-          style={styles.createButton}
+          style={[styles.createButton, { backgroundColor: colors.primary }]}
           disabled={!newTimer.name.trim()}
-        />
+        >
+          <Text style={styles.createButtonText}>Create Timer</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  durationCard: {
+    borderRadius: designStyles.borderRadius.xxl,
+    padding: designStyles.spacing.xxl,
+    borderWidth: 1,
   },
-  header: {
+  durationDisplay: {
+    fontSize: 40,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: designStyles.spacing.xxl,
+    fontFamily: 'monospace',
+  },
+  durationControls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: designStyles.spacing.sm,
+  },
+  durationColumn: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  content: {
     flex: 1,
-    paddingHorizontal: 20,
+    minWidth: 80,
   },
-  section: {
-    marginBottom: 20,
+  durationLabel: {
+    fontSize: designStyles.fontSize.xs,
+    fontWeight: '500',
+    marginBottom: designStyles.spacing.sm,
   },
-  sectionTitle: {
-    fontSize: 18,
+  durationButtons: {
+    alignItems: 'center',
+    gap: designStyles.spacing.sm,
+  },
+  durationButton: {
+    padding: designStyles.spacing.md,
+    borderRadius: designStyles.borderRadius.lg,
+    minWidth: 48,
+    alignItems: 'center',
+  },
+  durationButtonText: {
+    fontSize: designStyles.fontSize.lg,
     fontWeight: '600',
-    marginBottom: 16,
+  },
+  durationInput: {
+    borderRadius: designStyles.borderRadius.lg,
+    borderWidth: 1,
+    paddingHorizontal: designStyles.spacing.md,
+    paddingVertical: designStyles.spacing.md,
+    minWidth: 60,
+    textAlign: 'center',
+  },
+  timesContainer: {
+    gap: designStyles.spacing.md,
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: designStyles.spacing.md,
   },
   timeInput: {
     flex: 1,
-    marginBottom: 0,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingVertical: designStyles.spacing.lg,
+    fontFamily: 'monospace',
   },
-  timeInputField: {
-    textAlign: 'center',
+  removeTimeButton: {
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
   },
   addTimeButton: {
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: designStyles.spacing.sm,
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  addTimeText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '500',
   },
   frequencyGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: designStyles.spacing.md,
   },
   frequencyButton: {
     flex: 1,
     minWidth: '45%',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    alignItems: 'center',
+  },
+  frequencyButtonText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '600',
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    paddingTop: 20,
+    paddingHorizontal: designStyles.spacing.xxl,
+    paddingBottom: designStyles.spacing.xl,
+    paddingTop: designStyles.spacing.lg,
+    borderTopWidth: 1,
   },
   createButton: {
-    width: '100%',
+    paddingVertical: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xxl,
+    alignItems: 'center',
+    ...designStyles.shadow.lg,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: designStyles.fontSize.lg,
+    fontWeight: '600',
   },
 });

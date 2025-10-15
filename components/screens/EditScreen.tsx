@@ -1,14 +1,13 @@
-import { X } from 'lucide-react-native';
+import { Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { Timer, TimerDuration } from '../../types';
 import { durationToMinutes, minutesToDuration } from '../../utils/timeUtils';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { DurationPicker } from '../ui/DurationPicker';
 import { FrequencyPicker } from '../ui/FrequencyPicker';
-import { IconButton } from '../ui/IconButton';
+import { Header } from '../ui/Header';
 import { Input } from '../ui/Input';
 import { TimePicker } from '../ui/TimePicker';
 
@@ -18,8 +17,9 @@ interface EditScreenProps {
 }
 
 export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
-  const { state, updateTimer, setTimeFormat } = useApp();
+  const { state, updateTimer, deleteTimer, setTimeFormat } = useApp();
   const { isDark, settings } = state;
+  const colors = getDesignColors(isDark);
 
   const [editedTimer, setEditedTimer] = useState<Timer>(timer);
   const [duration, setDuration] = useState<TimerDuration>(minutesToDuration(timer.duration));
@@ -105,86 +105,143 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
     }
   };
 
+  const handleDelete = async () => {
+    Alert.alert(
+      'Delete Timer',
+      'Are you sure you want to delete this timer?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteTimer(editedTimer.id);
+              onClose();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete timer. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          Edit Timer
-        </Text>
-        <IconButton
-          icon={<X size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-          onPress={onClose}
-          variant="ghost"
-        />
-      </View>
+    <View style={[designStyles.screen.container, { backgroundColor: colors.bg }]}>
+      {/* Header */}
+      <Header
+        title="Edit Timer"
+        onBackPress={onClose}
+        isDark={isDark}
+      />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.section}>
-          <Input
-            label="Timer Name"
-            value={editedTimer.name}
-            onChangeText={(text) => setEditedTimer({ ...editedTimer, name: text })}
-            placeholder="e.g., Morning Meditation"
-            error={errors.name}
-          />
-        </Card>
+      {/* Content */}
+      <ScrollView style={designStyles.screen.content} showsVerticalScrollIndicator={false}>
+        <View style={[designStyles.screen.formContent, { paddingTop: designStyles.spacing.xl }]}>
+          {/* Timer Name */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              TIMER NAME
+            </Text>
+            <Input
+              value={editedTimer.name}
+              onChangeText={(text) => setEditedTimer({ ...editedTimer, name: text })}
+              placeholder="e.g., Morning Meditation"
+              error={errors.name}
+              style={StyleSheet.flatten([designStyles.screen.input, { backgroundColor: colors.inputBg, borderColor: colors.border }])}
+              inputStyle={{ color: colors.text }}
+            />
+          </View>
 
-        <DurationPicker
-          value={duration}
-          onChange={handleDurationChange}
-          isDark={isDark}
-        />
+          {/* Duration */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              DURATION
+            </Text>
+            <DurationPicker
+              duration={duration}
+              onDurationChange={(newDuration) => {
+                const timerDuration: TimerDuration = {
+                  ...newDuration,
+                  milliseconds: 0
+                };
+                handleDurationChange(timerDuration);
+              }}
+              isDark={isDark}
+            />
+          </View>
 
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Notification Times
-          </Text>
-          
-           {editedTimer.times.map((time, index) => (
-             <View key={index} style={styles.timeRow}>
-               <TimePicker
-                 value={time}
-                 onChange={(newTime) => handleTimeChange(index, newTime)}
-                 format={settings.timeFormat}
-                 onFormatChange={setTimeFormat}
-                 isDark={isDark}
-                 error={typeof errors.times === 'string' ? errors.times : undefined}
-                 showFormatToggle={index === 0}
-               />
-               {editedTimer.times.length > 1 && (
-                 <IconButton
-                   icon={<X size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-                   onPress={() => handleRemoveTime(index)}
-                   variant="ghost"
-                   size="small"
-                 />
-               )}
-             </View>
-           ))}
+          {/* Notification Times */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              NOTIFICATION TIMES
+            </Text>
+            <View style={styles.timesContainer}>
+              {editedTimer.times.map((time, index) => (
+                <View key={index} style={styles.timeRow}>
+                  <TimePicker
+                    time={time}
+                    onTimeChange={(newTime) => handleTimeChange(index, newTime)}
+                    isDark={isDark}
+                    showFormatToggle={index === 0}
+                    onFormatChange={setTimeFormat}
+                    timeFormat={settings.timeFormat}
+                  />
+                  {editedTimer.times.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveTime(index)}
+                      style={[styles.removeTimeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    >
+                      <X size={20} color={colors.text} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              
+              <TouchableOpacity
+                onPress={handleAddTime}
+                style={[styles.addTimeButton, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.addTimeText, { color: colors.text }]}>Add Time</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <Button
-            title="Add Time"
-            onPress={handleAddTime}
-            variant="outline"
-            style={styles.addTimeButton}
-          />
-        </Card>
+          {/* Frequency */}
+          <View style={designStyles.screen.section}>
+            <Text style={[designStyles.screen.sectionLabel, { color: colors.text }]}>
+              FREQUENCY
+            </Text>
+            <FrequencyPicker
+              frequency={editedTimer.frequency}
+              customDays={editedTimer.customDays?.map(String) || []}
+              onFrequencyChange={(frequency) => handleFrequencyChange(frequency as any)}
+              onCustomDaysChange={(customDays) => setEditedTimer({ ...editedTimer, customDays: customDays.map(Number) })}
+              isDark={isDark}
+            />
+          </View>
 
-        <FrequencyPicker
-          frequency={editedTimer.frequency}
-          customDays={editedTimer.customDays}
-          onChange={handleFrequencyChange}
-          isDark={isDark}
-        />
+          {/* Delete Button */}
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={[styles.deleteButton, { backgroundColor: colors.red }]}
+          >
+            <Trash2 size={20} color="#FFFFFF" />
+            <Text style={styles.deleteButtonText}>Delete Timer</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Button
-          title="Save Changes"
+      {/* Footer */}
+      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        <TouchableOpacity
           onPress={handleSave}
-          style={styles.saveButton}
+          style={[styles.saveButton, { backgroundColor: colors.primary }]}
           disabled={!editedTimer.name.trim()}
-        />
+        >
+          <Text style={styles.saveButtonText}>Save Changes</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -196,43 +253,176 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingTop: 20,
+    paddingBottom: designStyles.spacing.sm,
+    marginHorizontal: designStyles.spacing.sm,
+    marginTop: designStyles.spacing.xs,
+    borderRadius: designStyles.borderRadius.lg,
+    ...designStyles.shadow.sm,
+  },
+  backButton: {
+    padding: designStyles.spacing.sm,
+    borderRadius: designStyles.borderRadius.lg,
+    marginRight: designStyles.spacing.lg,
   },
   title: {
-    fontSize: 28,
+    fontSize: designStyles.fontSize.xl,
     fontWeight: '700',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+  },
+  formContent: {
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingBottom: 100,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: designStyles.spacing.xxl,
   },
-  sectionTitle: {
-    fontSize: 18,
+  sectionLabel: {
+    fontSize: designStyles.fontSize.sm,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: designStyles.spacing.md,
+    letterSpacing: 1,
+  },
+  input: {
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingVertical: designStyles.spacing.lg,
+    fontSize: designStyles.fontSize.md,
+  },
+  durationCard: {
+    borderRadius: designStyles.borderRadius.xxl,
+    padding: designStyles.spacing.xxl,
+    borderWidth: 1,
+  },
+  durationDisplay: {
+    fontSize: 40,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: designStyles.spacing.xxl,
+    fontFamily: 'monospace',
+  },
+  durationControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: designStyles.spacing.sm,
+  },
+  durationColumn: {
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 80,
+  },
+  durationLabel: {
+    fontSize: designStyles.fontSize.xs,
+    fontWeight: '500',
+    marginBottom: designStyles.spacing.sm,
+  },
+  durationButtons: {
+    alignItems: 'center',
+    gap: designStyles.spacing.sm,
+  },
+  durationButton: {
+    padding: designStyles.spacing.md,
+    borderRadius: designStyles.borderRadius.lg,
+    minWidth: 48,
+    alignItems: 'center',
+  },
+  durationButtonText: {
+    fontSize: designStyles.fontSize.lg,
+    fontWeight: '600',
+  },
+  durationInput: {
+    borderRadius: designStyles.borderRadius.lg,
+    borderWidth: 1,
+    paddingHorizontal: designStyles.spacing.md,
+    paddingVertical: designStyles.spacing.md,
+    minWidth: 60,
+    textAlign: 'center',
+  },
+  timesContainer: {
+    gap: designStyles.spacing.md,
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: designStyles.spacing.md,
+  },
+  timeInput: {
+    flex: 1,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingVertical: designStyles.spacing.lg,
+    fontFamily: 'monospace',
+  },
+  removeTimeButton: {
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
   },
   addTimeButton: {
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: designStyles.spacing.sm,
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  addTimeText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '500',
+  },
+  frequencyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: designStyles.spacing.md,
+  },
+  frequencyButton: {
+    flex: 1,
+    minWidth: '45%',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    alignItems: 'center',
+  },
+  frequencyButtonText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: designStyles.spacing.sm,
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    marginTop: designStyles.spacing.lg,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '600',
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    paddingTop: 20,
+    paddingHorizontal: designStyles.spacing.xxl,
+    paddingBottom: designStyles.spacing.xl,
+    paddingTop: designStyles.spacing.lg,
+    borderTopWidth: 1,
   },
   saveButton: {
-    width: '100%',
+    paddingVertical: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xxl,
+    alignItems: 'center',
+    ...designStyles.shadow.lg,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: designStyles.fontSize.lg,
+    fontWeight: '600',
   },
 });

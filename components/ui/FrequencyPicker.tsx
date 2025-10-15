@@ -1,164 +1,272 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { DAYS_OF_WEEK } from '../../utils/timeUtils';
-import { Button } from './Button';
-import { Card } from './Card';
+import { Calendar } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
+
+const DAYS_OF_WEEK = [
+  { key: 'monday', label: 'Mon' },
+  { key: 'tuesday', label: 'Tue' },
+  { key: 'wednesday', label: 'Wed' },
+  { key: 'thursday', label: 'Thu' },
+  { key: 'friday', label: 'Fri' },
+  { key: 'saturday', label: 'Sat' },
+  { key: 'sunday', label: 'Sun' },
+];
+
+const FREQUENCY_OPTIONS = [
+  { key: 'once', label: 'Once' },
+  { key: 'daily', label: 'Daily' },
+  { key: 'weekdays', label: 'Weekdays' },
+  { key: 'weekends', label: 'Weekends' },
+  { key: 'custom', label: 'Custom' },
+];
 
 interface FrequencyPickerProps {
-  frequency: 'daily' | 'weekdays' | 'weekends' | 'custom';
-  customDays?: number[];
-  onChange: (frequency: 'daily' | 'weekdays' | 'weekends' | 'custom', customDays?: number[]) => void;
-  isDark?: boolean;
+  frequency: string;
+  customDays: string[];
+  onFrequencyChange: (frequency: string) => void;
+  onCustomDaysChange: (days: string[]) => void;
+  isDark: boolean;
 }
 
 export const FrequencyPicker: React.FC<FrequencyPickerProps> = ({
   frequency,
-  customDays = [],
-  onChange,
-  isDark = false,
+  customDays,
+  onFrequencyChange,
+  onCustomDaysChange,
+  isDark,
 }) => {
-  const [selectedDays, setSelectedDays] = useState<number[]>(customDays);
+  const colors = getDesignColors(isDark);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedFrequency, setSelectedFrequency] = useState(frequency);
+  const [selectedDays, setSelectedDays] = useState(customDays);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const frequencyOptions = [
-    { value: 'daily', label: 'Daily' },
-    { value: 'weekdays', label: 'Weekdays' },
-    { value: 'weekends', label: 'Weekends' },
-    { value: 'custom', label: 'Custom' },
-  ] as const;
-
-  const handleFrequencyChange = (newFrequency: 'daily' | 'weekdays' | 'weekends' | 'custom') => {
-    if (newFrequency === 'custom') {
-      // Initialize with weekdays if no custom days selected
-      const initialDays = selectedDays.length > 0 ? selectedDays : [1, 2, 3, 4, 5];
-      onChange(newFrequency, initialDays);
-      setSelectedDays(initialDays);
-    } else {
-      onChange(newFrequency);
+  const handleFrequencySelect = (freq: string) => {
+    setSelectedFrequency(freq);
+    if (freq !== 'custom') {
       setSelectedDays([]);
+    } else {
+      // Auto-scroll down to show custom days when custom is selected
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ y: 200, animated: true });
+        }
+      }, 100);
     }
   };
 
-  const handleDayToggle = (dayValue: number) => {
-    const newSelectedDays = selectedDays.includes(dayValue)
-      ? selectedDays.filter(day => day !== dayValue)
-      : [...selectedDays, dayValue];
-    
-    setSelectedDays(newSelectedDays);
-    onChange('custom', newSelectedDays);
+  const handleDayToggle = (day: string) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter(d => d !== day));
+    } else {
+      setSelectedDays([...selectedDays, day]);
+    }
   };
 
-  const getFrequencyDescription = () => {
-    switch (frequency) {
-      case 'daily':
-        return 'Every day';
-      case 'weekdays':
-        return 'Monday to Friday';
-      case 'weekends':
-        return 'Saturday and Sunday';
-      case 'custom':
-        if (selectedDays.length === 0) return 'No days selected';
-        if (selectedDays.length === 7) return 'Every day';
-        const dayNames = selectedDays
-          .sort()
-          .map(day => DAYS_OF_WEEK[day].short)
-          .join(', ');
-        return dayNames;
-      default:
-        return '';
+  const handleConfirm = () => {
+    onFrequencyChange(selectedFrequency);
+    if (selectedFrequency === 'custom') {
+      onCustomDaysChange(selectedDays);
     }
+    setIsModalVisible(false);
+  };
+
+  const handleCancel = () => {
+    setSelectedFrequency(frequency);
+    setSelectedDays(customDays);
+    setIsModalVisible(false);
+  };
+
+  const getFrequencyLabel = () => {
+    if (selectedFrequency === 'custom' && selectedDays.length > 0) {
+      return selectedDays.map(day => 
+        DAYS_OF_WEEK.find(d => d.key === day)?.label
+      ).join(', ');
+    }
+    return FREQUENCY_OPTIONS.find(f => f.key === selectedFrequency)?.label || 'Once';
   };
 
   return (
-    <Card style={styles.container}>
-      <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-        Frequency
-      </Text>
-      
-      <View style={styles.frequencyGrid}>
-        {frequencyOptions.map((option) => (
-          <Button
-            key={option.value}
-            title={option.label}
-            onPress={() => handleFrequencyChange(option.value)}
-            variant={frequency === option.value ? 'primary' : 'outline'}
-            size="small"
-            style={styles.frequencyButton}
-          />
-        ))}
-      </View>
+    <>
+      <TouchableOpacity
+        onPress={() => setIsModalVisible(true)}
+        style={[styles.frequencyButton, { backgroundColor: colors.inputBg }]}
+      >
+        <Calendar size={20} color={colors.text} />
+        <Text style={[styles.frequencyText, { color: colors.text }]}>
+          {getFrequencyLabel()}
+        </Text>
+      </TouchableOpacity>
 
-      <Text style={[styles.description, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-        {getFrequencyDescription()}
-      </Text>
+      <Modal
+        visible={isModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.bg }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Frequency</Text>
+            </View>
 
-      {frequency === 'custom' && (
-        <View style={styles.customDaysContainer}>
-          <Text style={[styles.customDaysLabel, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Select days:
-          </Text>
-          <View style={styles.daysGrid}>
-            {DAYS_OF_WEEK.map((day) => (
-              <Button
-                key={day.value}
-                title={day.short}
-                onPress={() => handleDayToggle(day.value)}
-                variant={selectedDays.includes(day.value) ? 'primary' : 'outline'}
-                size="small"
-                style={[
-                  styles.dayButton,
-                  selectedDays.includes(day.value) && styles.selectedDayButton
-                ]}
-              />
-            ))}
+            <ScrollView ref={scrollViewRef} style={styles.scrollableContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.frequencyOptions}>
+                {FREQUENCY_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.key}
+                    onPress={() => handleFrequencySelect(option.key)}
+                    style={[
+                      styles.frequencyOption,
+                      {
+                        backgroundColor: selectedFrequency === option.key ? colors.primary : colors.inputBg,
+                      }
+                    ]}
+                  >
+                    <Text style={[
+                      styles.frequencyOptionText,
+                      { color: selectedFrequency === option.key ? '#FFFFFF' : colors.text }
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {selectedFrequency === 'custom' && (
+                <View style={styles.customDaysSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Days</Text>
+                  <View style={styles.daysGrid}>
+                    {DAYS_OF_WEEK.map((day) => (
+                      <TouchableOpacity
+                        key={day.key}
+                        onPress={() => handleDayToggle(day.key)}
+                        style={[
+                          styles.dayButton,
+                          {
+                            backgroundColor: selectedDays.includes(day.key) ? colors.primary : colors.inputBg,
+                          }
+                        ]}
+                      >
+                        <Text style={[
+                          styles.dayText,
+                          { color: selectedDays.includes(day.key) ? '#FFFFFF' : colors.text }
+                        ]}>
+                          {day.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={handleCancel}
+                style={[styles.actionButton, { backgroundColor: colors.inputBg }]}
+              >
+                <Text style={[styles.actionText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirm}
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              >
+                <Text style={[styles.actionText, { color: '#FFFFFF' }]}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      )}
-    </Card>
+      </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  frequencyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
   frequencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+    gap: designStyles.spacing.sm,
+  },
+  frequencyText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '500',
+  },
+  modalOverlay: {
     flex: 1,
-    minWidth: '45%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  description: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 16,
+  modalContent: {
+    borderTopLeftRadius: designStyles.borderRadius.xxl,
+    borderTopRightRadius: designStyles.borderRadius.xxl,
+    maxHeight: '70%',
+    flex: 1,
   },
-  customDaysContainer: {
-    marginTop: 8,
+  modalHeader: {
+    padding: designStyles.spacing.xxl,
+    paddingBottom: designStyles.spacing.lg,
   },
-  customDaysLabel: {
-    fontSize: 16,
+  scrollableContent: {
+    flex: 1,
+    paddingHorizontal: designStyles.spacing.xxl,
+  },
+  modalTitle: {
+    fontSize: designStyles.fontSize.xl,
+    fontWeight: '700',
+  },
+  frequencyOptions: {
+    gap: designStyles.spacing.sm,
+    marginBottom: designStyles.spacing.lg,
+  },
+  frequencyOption: {
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+  },
+  frequencyOptionText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '500',
+  },
+  customDaysSection: {
+    marginBottom: designStyles.spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: designStyles.fontSize.md,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: designStyles.spacing.md,
   },
   daysGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: designStyles.spacing.sm,
   },
   dayButton: {
-    flex: 1,
-    minWidth: '12%',
+    padding: designStyles.spacing.md,
+    borderRadius: designStyles.borderRadius.lg,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  selectedDayButton: {
-    backgroundColor: '#3B82F6',
+  dayText: {
+    fontSize: designStyles.fontSize.sm,
+    fontWeight: '500',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: designStyles.spacing.md,
+    padding: designStyles.spacing.xxl,
+    paddingTop: designStyles.spacing.lg,
+  },
+  actionButton: {
+    flex: 1,
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '600',
   },
 });

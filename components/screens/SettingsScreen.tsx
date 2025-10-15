@@ -1,13 +1,11 @@
-import { Bell, Check, Clock, Monitor, Moon, Sun, X } from 'lucide-react-native';
-import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Bell, Check, Monitor, Moon, Sun } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { notificationService } from '../../services/NotificationService';
 import { Theme } from '../../types';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { IconButton } from '../ui/IconButton';
-import { Switch } from '../ui/Switch';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
 
 const THEME_OPTIONS = [
   { value: 'light', icon: Sun, label: 'Light' },
@@ -15,16 +13,11 @@ const THEME_OPTIONS = [
   { value: 'system', icon: Monitor, label: 'System' },
 ] as const;
 
-const TIME_FORMAT_OPTIONS = [
-  { value: '12h', label: '12 Hour (AM/PM)' },
-  { value: '24h', label: '24 Hour' },
-] as const;
-
 export const SettingsScreen: React.FC = () => {
-  const { state, setTheme, setTimeFormat, setScreen } = useApp();
+  const { state, setTheme, setTimeFormat } = useApp();
   const { settings, isDark } = state;
-
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
+  const colors = getDesignColors(isDark);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     checkNotificationPermissions();
@@ -67,130 +60,113 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          Settings
-        </Text>
-        <IconButton
-          icon={<X size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-          onPress={() => setScreen('home')}
-          variant="ghost"
-        />
-      </View>
-
-      <View style={styles.content}>
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Appearance
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.text }]}>
+            APPEARANCE
           </Text>
-          
-          <View style={styles.themeOptions}>
+          <View style={styles.optionsContainer}>
             {THEME_OPTIONS.map(({ value, icon: Icon, label }) => (
-              <Button
+              <TouchableOpacity
                 key={value}
-                title=""
                 onPress={() => handleThemeChange(value)}
-                variant={settings.theme === value ? 'primary' : 'outline'}
-                style={styles.themeButton}
-                icon={
-                  <View style={styles.themeButtonContent}>
-                    <Icon size={18} color={settings.theme === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')} />
-                    <Text style={[
-                      styles.themeButtonText,
-                      {
-                        color: settings.theme === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')
-                      }
-                    ]}>
-                      {label}
-                    </Text>
-                    {settings.theme === value && (
-                      <Check size={18} color="#FFFFFF" />
-                    )}
-                  </View>
-                }
-              />
+                style={[
+                  styles.optionButton,
+                  {
+                    backgroundColor: settings.theme === value ? colors.primary : colors.inputBg,
+                  }
+                ]}
+              >
+                <View style={styles.optionContent}>
+                  <Icon size={20} color={settings.theme === value ? '#FFFFFF' : colors.text} />
+                  <Text style={[
+                    styles.optionText,
+                    { color: settings.theme === value ? '#FFFFFF' : colors.text }
+                  ]}>
+                    {label}
+                  </Text>
+                  {settings.theme === value && <Check size={20} color="#FFFFFF" />}
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
-        </Card>
+        </View>
 
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Time Format
+        {/* Time Format */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.text }]}>
+            TIME FORMAT
           </Text>
-          
-          <View style={styles.timeFormatOptions}>
-            {TIME_FORMAT_OPTIONS.map(({ value, label }) => (
-              <Button
-                key={value}
-                title=""
-                onPress={() => handleTimeFormatChange(value)}
-                variant={settings.timeFormat === value ? 'primary' : 'outline'}
-                style={styles.timeFormatButton}
-                icon={
-                  <View style={styles.timeFormatButtonContent}>
-                    <Clock size={18} color={settings.timeFormat === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')} />
-                    <Text style={[
-                      styles.timeFormatButtonText,
-                      {
-                        color: settings.timeFormat === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')
-                      }
-                    ]}>
-                      {label}
-                    </Text>
-                    {settings.timeFormat === value && (
-                      <Check size={18} color="#FFFFFF" />
-                    )}
-                  </View>
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity
+              onPress={() => handleTimeFormatChange('12h')}
+              style={[
+                styles.optionButton,
+                {
+                  backgroundColor: settings.timeFormat === '12h' ? colors.primary : colors.inputBg,
                 }
-              />
-            ))}
-          </View>
-        </Card>
+              ]}
+            >
+              <View style={styles.optionContent}>
+                <Text style={[
+                  styles.optionText,
+                  { color: settings.timeFormat === '12h' ? '#FFFFFF' : colors.text }
+                ]}>
+                  12 Hour (AM/PM)
+                </Text>
+                {settings.timeFormat === '12h' && <Check size={20} color="#FFFFFF" />}
+              </View>
+            </TouchableOpacity>
 
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            Notifications
+            <TouchableOpacity
+              onPress={() => handleTimeFormatChange('24h')}
+              style={[
+                styles.optionButton,
+                {
+                  backgroundColor: settings.timeFormat === '24h' ? colors.primary : colors.inputBg,
+                }
+              ]}
+            >
+              <View style={styles.optionContent}>
+                <Text style={[
+                  styles.optionText,
+                  { color: settings.timeFormat === '24h' ? '#FFFFFF' : colors.text }
+                ]}>
+                  24 Hour
+                </Text>
+                {settings.timeFormat === '24h' && <Check size={20} color="#FFFFFF" />}
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Notifications */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.text }]}>
+            NOTIFICATIONS
           </Text>
-          
-          <View style={styles.settingRow}>
+          <View style={[styles.settingRow, { backgroundColor: colors.inputBg }]}>
             <View style={styles.settingInfo}>
               <View style={styles.settingHeader}>
-                <Bell size={18} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                <Text style={[styles.settingLabel, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                <Bell size={20} color={colors.text} />
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
                   Timer Reminders
                 </Text>
               </View>
-              <Text style={[styles.settingDescription, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
                 Receive notifications for your scheduled timers
               </Text>
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={handleNotificationToggle}
+            <ToggleSwitch
+              checked={notificationsEnabled}
+              onChange={() => handleNotificationToggle(!notificationsEnabled)}
               size="medium"
             />
           </View>
-        </Card>
-
-        <Card style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-            About
-          </Text>
-          
-          <View style={styles.aboutInfo}>
-            <Text style={[styles.appName, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-              Reminder Timer
-            </Text>
-            <Text style={[styles.appVersion, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              Version 1.0.0
-            </Text>
-            <Text style={[styles.appDescription, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              A simple and elegant timer reminder app to help you stay on track with your daily routines.
-            </Text>
-          </View>
-        </Card>
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -199,106 +175,61 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: designStyles.spacing.xxl,
+    paddingTop: designStyles.spacing.lg,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: designStyles.spacing.xxxl,
   },
-  sectionTitle: {
-    fontSize: 18,
+  sectionLabel: {
+    fontSize: designStyles.fontSize.sm,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: designStyles.spacing.md,
+    letterSpacing: 1,
   },
-  themeOptions: {
-    gap: 8,
+  optionsContainer: {
+    gap: designStyles.spacing.sm,
   },
-  themeButton: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 16,
+  optionButton: {
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
   },
-  themeButtonContent: {
+  optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    width: '100%',
     justifyContent: 'space-between',
   },
-  themeButtonText: {
-    fontSize: 16,
+  optionText: {
+    fontSize: designStyles.fontSize.md,
     fontWeight: '500',
     flex: 1,
-  },
-  timeFormatOptions: {
-    gap: 8,
-  },
-  timeFormatButton: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 16,
-  },
-  timeFormatButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    justifyContent: 'space-between',
-  },
-  timeFormatButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
+    marginLeft: designStyles.spacing.md,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
   },
   settingInfo: {
     flex: 1,
-    marginRight: 16,
+    marginRight: designStyles.spacing.lg,
   },
   settingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: designStyles.spacing.sm,
+    marginBottom: designStyles.spacing.xs,
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: designStyles.fontSize.md,
     fontWeight: '500',
   },
   settingDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  aboutInfo: {
-    alignItems: 'center',
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  appVersion: {
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  appDescription: {
-    fontSize: 14,
-    textAlign: 'center',
+    fontSize: designStyles.fontSize.sm,
     lineHeight: 20,
   },
 });

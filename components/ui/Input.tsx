@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
+import { getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 
 interface InputProps {
@@ -33,6 +34,7 @@ export const Input: React.FC<InputProps> = ({
 }) => {
   const { state } = useApp();
   const { isDark } = state;
+  const colors = getDesignColors(isDark);
 
   const containerStyles = [
     styles.container,
@@ -41,21 +43,24 @@ export const Input: React.FC<InputProps> = ({
 
   const inputStyles = [
     styles.input,
-    styles.inputTheme,
+    {
+      backgroundColor: colors.inputBg,
+      borderColor: error ? colors.red : colors.border,
+      color: colors.text,
+    },
     multiline && styles.multiline,
-    error && styles.error,
     disabled && styles.disabled,
     inputStyle,
   ];
 
   const labelStyles = [
     styles.label,
-    styles.labelTheme,
+    { color: colors.textSecondary },
   ];
 
   const errorStyles = [
     styles.errorText,
-    styles.errorTextTheme,
+    { color: colors.red },
   ];
 
   return (
@@ -66,7 +71,7 @@ export const Input: React.FC<InputProps> = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+        placeholderTextColor={colors.textSecondary}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         multiline={multiline}
@@ -88,9 +93,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
-  labelTheme: {
-    color: '#6B7280',
-  },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -98,17 +100,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
-  inputTheme: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D1D5DB',
-    color: '#111827',
-  },
   multiline: {
     paddingTop: 12,
     minHeight: 80,
-  },
-  error: {
-    borderColor: '#EF4444',
   },
   disabled: {
     opacity: 0.5,
@@ -116,8 +110,5 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     marginTop: 4,
-  },
-  errorTextTheme: {
-    color: '#EF4444',
   },
 });

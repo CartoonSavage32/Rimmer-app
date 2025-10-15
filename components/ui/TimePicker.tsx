@@ -1,292 +1,351 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Button } from './Button';
-import { Card } from './Card';
-import { Input } from './Input';
-import { Switch } from './Switch';
+import { Clock } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
+import { ToggleSwitch } from './ToggleSwitch';
 
 interface TimePickerProps {
-  value: string; // HH:MM format
-  onChange: (time: string) => void;
-  format: '12h' | '24h';
-  onFormatChange?: (format: '12h' | '24h') => void;
-  isDark?: boolean;
-  label?: string;
-  error?: string;
+  time: string;
+  onTimeChange: (time: string) => void;
+  isDark: boolean;
   showFormatToggle?: boolean;
+  onFormatChange?: (format: '12h' | '24h') => void;
+  timeFormat: '12h' | '24h';
 }
 
+const ITEM_HEIGHT = 50;
+const VISIBLE_ITEMS = 3;
+
 export const TimePicker: React.FC<TimePickerProps> = ({
-  value,
-  onChange,
-  format,
-  onFormatChange,
-  isDark = false,
-  label = 'Time',
-  error,
+  time,
+  onTimeChange,
+  isDark,
   showFormatToggle = false,
+  onFormatChange,
+  timeFormat,
 }) => {
-  const [displayValue, setDisplayValue] = useState('');
-  const [hours, setHours] = useState('12');
-  const [minutes, setMinutes] = useState('00');
-  const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
+  const colors = getDesignColors(isDark);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedTime, setSelectedTime] = useState(time);
+  const [selectedHours, setSelectedHours] = useState(0);
+  const [selectedMinutes, setSelectedMinutes] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
+
+  const hoursScrollRef = useRef<ScrollView>(null);
+  const minutesScrollRef = useRef<ScrollView>(null);
+  const periodScrollRef = useRef<ScrollView>(null);
+
+  const parseTime = (timeStr: string) => {
+    const [timePart, period] = timeStr.split(' ');
+    const [hours, minutes] = timePart.split(':').map(Number);
+    return { hours, minutes, period: period as 'AM' | 'PM' };
+  };
+
+  const formatTime = (hours: number, minutes: number, period?: string) => {
+    if (timeFormat === '12h') {
+      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period || 'AM'}`;
+    }
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
-    updateDisplayValue(value, format);
-  }, [value, format]);
+    if (isModalVisible) {
+      const { hours, minutes, period } = parseTime(selectedTime);
+      setSelectedHours(hours);
+      setSelectedMinutes(minutes);
+      setSelectedPeriod(period || 'AM');
+    }
+  }, [isModalVisible, selectedTime]);
 
-  const updateDisplayValue = (time24h: string, currentFormat: '12h' | '24h') => {
-    const [h, m] = time24h.split(':').map(Number);
-    
-    if (currentFormat === '12h') {
-      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      const ampmValue = h < 12 ? 'AM' : 'PM';
-      setHours(hour12.toString());
-      setMinutes(m.toString().padStart(2, '0'));
-      setAmpm(ampmValue);
-      setDisplayValue(`${hour12}:${m.toString().padStart(2, '0')} ${ampmValue}`);
-    } else {
-      setHours(h.toString().padStart(2, '0'));
-      setMinutes(m.toString().padStart(2, '0'));
-      setDisplayValue(time24h);
+  const handleTimeSelect = (hours: number, minutes: number, period?: 'AM' | 'PM') => {
+    let finalHours = hours;
+    let finalPeriod = period || 'AM';
+
+    if (timeFormat === '12h') {
+      if (hours === 0) {
+        finalHours = 12;
+        finalPeriod = 'AM';
+      } else if (hours < 12) {
+        finalPeriod = 'AM';
+      } else if (hours === 12) {
+        finalPeriod = 'PM';
+      } else {
+        finalHours = hours - 12;
+        finalPeriod = 'PM';
+      }
+    }
+
+    const newTime = formatTime(finalHours, minutes, finalPeriod);
+    setSelectedTime(newTime);
+  };
+
+  const handleConfirm = () => {
+    onTimeChange(selectedTime);
+    setIsModalVisible(false);
+  };
+
+  const handleCancel = () => {
+    setSelectedTime(time);
+    setIsModalVisible(false);
+  };
+
+  const generateNumbers = (max: number, isHours = false) => {
+    const numbers = [];
+    for (let i = 0; i <= max; i++) {
+      numbers.push(i);
+    }
+    // Add extra items for infinite scroll
+    return [...numbers, ...numbers, ...numbers];
+  };
+
+  const generatePeriods = () => {
+    return ['AM', 'PM', 'AM', 'PM', 'AM', 'PM'];
+  };
+
+  const handleScroll = (scrollViewRef: React.RefObject<ScrollView | null>, type: 'hours' | 'minutes' | 'period') => {
+    return (event: any) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const index = Math.round(offsetY / ITEM_HEIGHT);
+      
+      if (type === 'hours') {
+        const hours = index % (timeFormat === '12h' ? 12 : 24);
+        setSelectedHours(hours);
+        handleTimeSelect(hours, selectedMinutes, selectedPeriod);
+      } else if (type === 'minutes') {
+        const minutes = index % 60;
+        setSelectedMinutes(minutes);
+        handleTimeSelect(selectedHours, minutes, selectedPeriod);
+      } else if (type === 'period') {
+        const period = index % 2 === 0 ? 'AM' : 'PM';
+        setSelectedPeriod(period);
+        handleTimeSelect(selectedHours, selectedMinutes, period);
+      }
+    };
+  };
+
+  const scrollToIndex = (scrollViewRef: React.RefObject<ScrollView | null>, index: number, total: number) => {
+    if (scrollViewRef.current) {
+      const offsetY = (index + total) * ITEM_HEIGHT;
+      scrollViewRef.current.scrollTo({ y: offsetY, animated: false });
     }
   };
 
-  const handleHoursChange = (text: string) => {
-    const numValue = parseInt(text) || 0;
-    const clampedValue = Math.max(1, Math.min(12, numValue));
-    setHours(clampedValue.toString());
-    updateTime24h(clampedValue, parseInt(minutes), ampm);
-  };
-
-  const handleMinutesChange = (text: string) => {
-    const numValue = parseInt(text) || 0;
-    const clampedValue = Math.max(0, Math.min(59, numValue));
-    setMinutes(clampedValue.toString().padStart(2, '0'));
-    updateTime24h(parseInt(hours), clampedValue, ampm);
-  };
-
-  const handleAmpmChange = (newAmpm: 'AM' | 'PM') => {
-    setAmpm(newAmpm);
-    updateTime24h(parseInt(hours), parseInt(minutes), newAmpm);
-  };
-
-  const updateTime24h = (h: number, m: number, a: 'AM' | 'PM') => {
-    let hour24 = h;
-    
-    if (a === 'AM' && h === 12) {
-      hour24 = 0;
-    } else if (a === 'PM' && h !== 12) {
-      hour24 = h + 12;
+  useEffect(() => {
+    if (isModalVisible) {
+      setTimeout(() => {
+        if (timeFormat === '12h') {
+          const hoursIndex = selectedHours === 0 ? 12 : selectedHours;
+          scrollToIndex(hoursScrollRef, hoursIndex - 1, 12);
+        } else {
+          scrollToIndex(hoursScrollRef, selectedHours, 24);
+        }
+        scrollToIndex(minutesScrollRef, selectedMinutes, 60);
+        scrollToIndex(periodScrollRef, selectedPeriod === 'AM' ? 0 : 1, 2);
+      }, 100);
     }
-    
-    const time24h = `${hour24.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    onChange(time24h);
-  };
+  }, [isModalVisible, timeFormat]);
 
-  const quickTimeButtons = [
-    { label: '6:00', value: '06:00' },
-    { label: '9:00', value: '09:00' },
-    { label: '12:00', value: '12:00' },
-    { label: '15:00', value: '15:00' },
-    { label: '18:00', value: '18:00' },
-    { label: '21:00', value: '21:00' },
-  ];
+  const renderScrollWheel = (
+    data: (string | number)[],
+    selectedValue: string | number,
+    onScroll: (event: any) => void,
+    label: string,
+    scrollRef: React.RefObject<ScrollView | null>
+  ) => (
+    <View style={styles.wheelContainer}>
+      <Text style={[styles.wheelLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={[styles.wheel, { backgroundColor: colors.inputBg }]}>
+        <ScrollView
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={ITEM_HEIGHT}
+          decelerationRate="fast"
+          onMomentumScrollEnd={onScroll}
+          style={styles.scrollView}
+        >
+          {data.map((item, index) => (
+            <View key={index} style={styles.wheelItem}>
+              <Text style={[
+                styles.wheelText,
+                { color: colors.text }
+              ]}>
+                {item.toString().padStart(2, '0')}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
 
-  const handleQuickTime = (time24h: string) => {
-    onChange(time24h);
-  };
+  const hours = generateNumbers(timeFormat === '12h' ? 12 : 24, true);
+  const minutes = generateNumbers(59);
+  const periods = generatePeriods();
 
   return (
-    <Card style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.label, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          {label}
-        </Text>
-        {showFormatToggle && onFormatChange && (
-          <View style={styles.formatToggle}>
-            <Text style={[styles.formatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              {format === '12h' ? '12H' : '24H'}
-            </Text>
-            <Switch
-              value={format === '12h'}
-              onValueChange={(value) => onFormatChange(value ? '12h' : '24h')}
-              size="small"
-            />
-          </View>
-        )}
-      </View>
-      
-      {format === '12h' ? (
-        <View style={styles.timeInputs12h}>
-          <Input
-            value={hours}
-            onChangeText={handleHoursChange}
-            keyboardType="numeric"
-            style={styles.hoursInput}
-            inputStyle={styles.timeInputField}
-            error={error}
-          />
-          <Text style={[styles.colon, { color: isDark ? '#F9FAFB' : '#111827' }]}>:</Text>
-          <Input
-            value={minutes}
-            onChangeText={handleMinutesChange}
-            keyboardType="numeric"
-            style={styles.minutesInput}
-            inputStyle={styles.timeInputField}
-          />
-          <View style={styles.ampmContainer}>
-            <Button
-              title="AM"
-              onPress={() => handleAmpmChange('AM')}
-              variant={ampm === 'AM' ? 'primary' : 'outline'}
-              size="small"
-              style={styles.ampmButton}
-            />
-            <Button
-              title="PM"
-              onPress={() => handleAmpmChange('PM')}
-              variant={ampm === 'PM' ? 'primary' : 'outline'}
-              size="small"
-              style={styles.ampmButton}
-            />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.timeInputs24h}>
-          <Input
-            value={hours}
-            onChangeText={(text) => {
-              const numValue = parseInt(text) || 0;
-              const clampedValue = Math.max(0, Math.min(23, numValue));
-              setHours(clampedValue.toString().padStart(2, '0'));
-              onChange(`${clampedValue.toString().padStart(2, '0')}:${minutes}`);
-            }}
-            keyboardType="numeric"
-            style={styles.hoursInput}
-            inputStyle={styles.timeInputField}
-            error={error}
-          />
-          <Text style={[styles.colon, { color: isDark ? '#F9FAFB' : '#111827' }]}>:</Text>
-          <Input
-            value={minutes}
-            onChangeText={(text) => {
-              const numValue = parseInt(text) || 0;
-              const clampedValue = Math.max(0, Math.min(59, numValue));
-              setMinutes(clampedValue.toString().padStart(2, '0'));
-              onChange(`${hours}:${clampedValue.toString().padStart(2, '0')}`);
-            }}
-            keyboardType="numeric"
-            style={styles.minutesInput}
-            inputStyle={styles.timeInputField}
-          />
-        </View>
-      )}
+    <>
+      <TouchableOpacity
+        onPress={() => setIsModalVisible(true)}
+        style={[styles.timeButton, { backgroundColor: colors.inputBg }]}
+      >
+        <Clock size={20} color={colors.text} />
+        <Text style={[styles.timeText, { color: colors.text }]}>{time}</Text>
+      </TouchableOpacity>
 
-      <View style={styles.quickTimes}>
-        <Text style={[styles.quickTimesLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-          Quick times:
-        </Text>
-        <View style={styles.quickTimeButtons}>
-          {quickTimeButtons.map((button) => (
-            <Button
-              key={button.value}
-              title={format === '12h' ? 
-                (() => {
-                  const [h, m] = button.value.split(':').map(Number);
-                  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                  const ampm = h < 12 ? 'AM' : 'PM';
-                  return `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`;
-                })() : 
-                button.label
-              }
-              onPress={() => handleQuickTime(button.value)}
-              variant="outline"
-              size="small"
-              style={styles.quickTimeButton}
-            />
-          ))}
+      <Modal
+        visible={isModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.bg }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Time</Text>
+              {showFormatToggle && onFormatChange && (
+                <View style={styles.formatToggle}>
+                  <Text style={[styles.formatLabel, { color: colors.text }]}>12h</Text>
+                  <ToggleSwitch
+                    checked={timeFormat === '24h'}
+                    onChange={() => onFormatChange(timeFormat === '12h' ? '24h' : '12h')}
+                    size="small"
+                  />
+                  <Text style={[styles.formatLabel, { color: colors.text }]}>24h</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.timeWheels}>
+              {renderScrollWheel(
+                hours,
+                selectedHours,
+                handleScroll(hoursScrollRef, 'hours'),
+                'Hour',
+                hoursScrollRef
+              )}
+              {renderScrollWheel(
+                minutes,
+                selectedMinutes,
+                handleScroll(minutesScrollRef, 'minutes'),
+                'Min',
+                minutesScrollRef
+              )}
+              {timeFormat === '12h' && renderScrollWheel(
+                periods,
+                selectedPeriod,
+                handleScroll(periodScrollRef, 'period'),
+                'Period',
+                periodScrollRef
+              )}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={handleCancel}
+                style={[styles.actionButton, { backgroundColor: colors.inputBg }]}
+              >
+                <Text style={[styles.actionText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirm}
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              >
+                <Text style={[styles.actionText, { color: '#FFFFFF' }]}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </View>
-    </Card>
+      </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
+  timeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+    gap: designStyles.spacing.sm,
   },
-  header: {
+  timeText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: designStyles.borderRadius.xxl,
+    borderTopRightRadius: designStyles.borderRadius.xxl,
+    padding: designStyles.spacing.xxl,
+    maxHeight: '70%',
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: designStyles.spacing.xxl,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
+  modalTitle: {
+    fontSize: designStyles.fontSize.xl,
+    fontWeight: '700',
   },
   formatToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: designStyles.spacing.sm,
   },
   formatLabel: {
-    fontSize: 14,
+    fontSize: designStyles.fontSize.sm,
     fontWeight: '500',
   },
-  timeInputs12h: {
+  timeWheels: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: designStyles.spacing.xxl,
+  },
+  wheelContainer: {
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
   },
-  timeInputs24h: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  hoursInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  minutesInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  timeInputField: {
-    textAlign: 'center',
-    fontSize: 18,
-    fontFamily: 'monospace',
-  },
-  colon: {
-    fontSize: 24,
-    fontWeight: '700',
-    fontFamily: 'monospace',
-  },
-  ampmContainer: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  ampmButton: {
-    minWidth: 50,
-  },
-  quickTimes: {
-    marginTop: 8,
-  },
-  quickTimesLabel: {
-    fontSize: 14,
+  wheelLabel: {
+    fontSize: designStyles.fontSize.sm,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: designStyles.spacing.sm,
   },
-  quickTimeButtons: {
+  wheel: {
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+    width: 80,
+    borderRadius: designStyles.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  scrollView: {
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+  },
+  wheelItem: {
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wheelText: {
+    fontSize: designStyles.fontSize.lg,
+    fontWeight: '500',
+  },
+  modalActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: designStyles.spacing.md,
   },
-  quickTimeButton: {
+  actionButton: {
     flex: 1,
-    minWidth: '30%',
+    padding: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: designStyles.fontSize.md,
+    fontWeight: '600',
   },
 });

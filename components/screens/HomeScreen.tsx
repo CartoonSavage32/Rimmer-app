@@ -1,113 +1,95 @@
-import { Bell, Clock, Edit, Play, Plus, Square } from 'lucide-react-native';
+import { Bell, Clock, Edit2, Plus, Settings } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { Timer } from '../../types';
 import { formatFrequency, formatTime } from '../../utils/timeUtils';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { IconButton } from '../ui/IconButton';
-import { Switch } from '../ui/Switch';
-import { TimerCountdown } from '../ui/TimerCountdown';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { EditScreen } from './EditScreen';
 import { NotificationsScreen } from './NotificationsScreen';
+import { RunningTimerScreen } from './RunningTimerScreen';
+import { SettingsScreen } from './SettingsScreen';
 
 export const HomeScreen: React.FC = () => {
   const { state, toggleTimer, startTimer, stopTimer, setScreen } = useApp();
   const { timers, isDark, settings, currentScreen } = state;
   const [editingTimer, setEditingTimer] = useState<Timer | null>(null);
+  const [runningTimerId, setRunningTimerId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'timers' | 'notifications' | 'settings'>('timers');
+  
+  const colors = getDesignColors(isDark);
 
   const handleEditTimer = (timer: Timer) => {
     if (timer.isRunning) {
-      // Don't allow editing running timers
       return;
     }
     setEditingTimer(timer);
   };
 
-  const handleManualTrigger = (timer: Timer) => {
-    if (timer.isRunning) {
-      stopTimer(timer.id);
-    } else {
-      startTimer(timer.id);
-    }
+  const handleStartTimer = (timer: Timer) => {
+    setRunningTimerId(timer.id);
   };
 
-  const renderTimer = ({ item: timer }: { item: Timer }) => (
-    <Card key={timer.id} style={styles.timerCard} variant="elevated">
-      {timer.isRunning && (
-        <TimerCountdown timer={timer} isDark={isDark} />
-      )}
-      
-      <View style={styles.timerHeader}>
+  const TimerCard = ({ timer }: { timer: Timer }) => (
+    <TouchableOpacity
+      style={[styles.timerCard, { backgroundColor: colors.cardBg }]}
+      onPress={() => handleStartTimer(timer)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.timerCardContent}>
         <View style={styles.timerInfo}>
-          <Text style={[styles.timerName, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+          <Text style={[styles.timerName, { color: colors.text }]}>
             {timer.name}
           </Text>
           <View style={styles.timerDuration}>
-            <Clock size={14} color={isDark ? '#6B7280' : '#9CA3AF'} />
-            <Text style={[styles.durationText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              {timer.duration} min
+            <Clock size={16} color={colors.textSecondary} />
+            <Text style={[styles.durationText, { color: colors.textSecondary }]}>
+              {Math.floor(timer.duration)} min
             </Text>
+          </View>
+          <View style={styles.timerTimes}>
+            <Bell size={16} color={colors.textSecondary} />
+            <View style={styles.timeChips}>
+              {timer.times.map((time, idx) => (
+                <View
+                  key={idx}
+                  style={[styles.timeChip, { backgroundColor: colors.inputBg }]}
+                >
+                  <Text style={[styles.timeText, { color: colors.text }]}>
+                    {formatTime(time, settings.timeFormat)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
         <View style={styles.timerControls}>
-          <IconButton
-            icon={<Edit size={16} color={timer.isRunning ? '#9CA3AF' : (isDark ? '#9CA3AF' : '#6B7280')} />}
-            onPress={() => handleEditTimer(timer)}
-            variant="ghost"
-            size="small"
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              handleEditTimer(timer);
+            }}
+            style={[styles.controlButton, { backgroundColor: colors.surfaceHover }]}
             disabled={timer.isRunning}
-          />
-          <Switch
-            value={timer.enabled}
-            onValueChange={() => toggleTimer(timer.id)}
+          >
+            <Edit2 size={16} color={timer.isRunning ? colors.textSecondary : colors.text} />
+          </TouchableOpacity>
+          <ToggleSwitch
+            checked={timer.enabled}
+            onChange={() => {
+              toggleTimer(timer.id);
+            }}
             size="medium"
           />
         </View>
       </View>
-      
-      <View style={styles.timerTimes}>
-        {timer.times.map((time, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.timeChip,
-              { backgroundColor: isDark ? '#374151' : '#FFFFFF' }
-            ]}
-          >
-            <Bell size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
-            <Text style={[styles.timeText, { color: isDark ? '#D1D5DB' : '#374151' }]}>
-              {formatTime(time, settings.timeFormat)}
-            </Text>
-          </View>
-        ))}
-        <View
-          style={[
-            styles.frequencyChip,
-            { backgroundColor: isDark ? '#374151' : '#FFFFFF' }
-          ]}
-        >
-          <Text style={[styles.frequencyText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-            {formatFrequency(timer.frequency, timer.customDays)}
-          </Text>
-        </View>
+      <View style={[styles.frequencyChip, { backgroundColor: colors.primary }]}>
+        <Text style={styles.frequencyText}>
+          {formatFrequency(timer.frequency, timer.customDays)}
+        </Text>
       </View>
-
-      <View style={styles.timerActions}>
-        <Button
-          title={timer.isRunning ? 'Stop Timer' : 'Start Timer'}
-          onPress={() => handleManualTrigger(timer)}
-          variant={timer.isRunning ? 'outline' : 'primary'}
-          size="small"
-          icon={timer.isRunning ? 
-            <Square size={16} color={isDark ? '#9CA3AF' : '#6B7280'} /> : 
-            <Play size={16} color="#FFFFFF" />
-          }
-          style={styles.manualTriggerButton}
-        />
-      </View>
-    </Card>
+    </TouchableOpacity>
   );
 
   if (editingTimer) {
@@ -119,60 +101,133 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
+  if (runningTimerId) {
+    return (
+      <RunningTimerScreen
+        timerId={runningTimerId}
+        onClose={() => setRunningTimerId(null)}
+      />
+    );
+  }
+
   if (currentScreen === 'notifications') {
     return <NotificationsScreen />;
   }
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'timers':
+        return (
+          <View style={styles.tabContent}>
+            {timers.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
+                  <Clock size={48} color={colors.textSecondary} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  No timers yet
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                  Create your first timer to stay focused and productive
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={timers}
+                renderItem={({ item }) => <TimerCard timer={item} />}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.timersList}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </View>
+        );
+      case 'notifications':
+        return <NotificationsScreen />;
+      case 'settings':
+        return <SettingsScreen />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          Timers
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {activeTab === 'timers' ? 'Timers' : 
+           activeTab === 'notifications' ? 'Notifications' : 'Settings'}
         </Text>
-        <View style={styles.headerActions}>
-          <IconButton
-            icon={<Bell size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-            onPress={() => setScreen('notifications')}
-            variant="ghost"
-          />
-          <IconButton
-            icon={<Clock size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-            onPress={() => setScreen('settings')}
-            variant="ghost"
-          />
+      </View>
+
+      {/* Tab Content */}
+      <View style={styles.content}>
+        {renderTabContent()}
+      </View>
+
+      {/* Bottom Navigation */}
+      <View style={[styles.bottomNav, { backgroundColor: colors.surface }]}>
+        <View style={styles.navButtons}>
+          <TouchableOpacity
+            onPress={() => setActiveTab('timers')}
+            style={[
+              styles.navButton,
+              activeTab === 'timers' && { backgroundColor: colors.primary }
+            ]}
+          >
+            <Clock size={24} color={activeTab === 'timers' ? '#FFFFFF' : colors.text} />
+            <Text style={[
+              styles.navButtonText,
+              { color: activeTab === 'timers' ? '#FFFFFF' : colors.text }
+            ]}>
+              Timers
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab('notifications')}
+            style={[
+              styles.navButton,
+              activeTab === 'notifications' && { backgroundColor: colors.primary }
+            ]}
+          >
+            <Bell size={24} color={activeTab === 'notifications' ? '#FFFFFF' : colors.text} />
+            <Text style={[
+              styles.navButtonText,
+              { color: activeTab === 'notifications' ? '#FFFFFF' : colors.text }
+            ]}>
+              Notifications
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab('settings')}
+            style={[
+              styles.navButton,
+              activeTab === 'settings' && { backgroundColor: colors.primary }
+            ]}
+          >
+            <Settings size={24} color={activeTab === 'settings' ? '#FFFFFF' : colors.text} />
+            <Text style={[
+              styles.navButtonText,
+              { color: activeTab === 'settings' ? '#FFFFFF' : colors.text }
+            ]}>
+              Settings
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.content}>
-        {timers.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Clock size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
-            <Text style={[styles.emptyTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-              No timers yet
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              Create your first timer to get started
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={timers}
-            renderItem={renderTimer}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.timersList}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
-
-    <View style={styles.fabContainer}>
-        <Button
-          title=""
+      {/* Floating Action Button */}
+      {activeTab === 'timers' && (
+        <TouchableOpacity
           onPress={() => setScreen('create')}
-          style={styles.fab}
-          icon={<Plus size={24} color="#FFFFFF" />}
-        />
-      </View>
+          style={[styles.fab, { backgroundColor: colors.accent }]}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -182,121 +237,156 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingTop: 20,
+    paddingBottom: designStyles.spacing.sm,
+    marginHorizontal: designStyles.spacing.sm,
+    marginTop: designStyles.spacing.xs,
+    borderRadius: designStyles.borderRadius.lg,
+    ...designStyles.shadow.sm,
   },
   title: {
-    fontSize: 28,
+    fontSize: designStyles.fontSize.lg,
     fontWeight: '700',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
   },
-  timersList: {
+  tabContent: {
+    flex: 1,
+    paddingHorizontal: designStyles.spacing.lg,
     paddingBottom: 100,
   },
-  timerCard: {
-    marginBottom: 16,
+  timersList: {
+    paddingTop: designStyles.spacing.sm,
   },
-  timerHeader: {
+  timerCard: {
+    borderRadius: designStyles.borderRadius.xl,
+    padding: designStyles.spacing.lg,
+    marginBottom: designStyles.spacing.md,
+    ...designStyles.shadow.md,
+  },
+  timerCardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: designStyles.spacing.md,
   },
   timerInfo: {
     flex: 1,
   },
-  timerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   timerName: {
-    fontSize: 18,
+    fontSize: designStyles.fontSize.lg,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: designStyles.spacing.sm,
   },
   timerDuration: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: designStyles.spacing.xs,
+    marginBottom: designStyles.spacing.sm,
   },
   durationText: {
-    fontSize: 14,
+    fontSize: designStyles.fontSize.sm,
   },
   timerTimes: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: designStyles.spacing.xs,
+  },
+  timeChips: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: designStyles.spacing.xs,
   },
   timeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: designStyles.spacing.md,
+    paddingVertical: designStyles.spacing.xs,
+    borderRadius: designStyles.borderRadius.lg,
   },
   timeText: {
-    fontSize: 12,
+    fontSize: designStyles.fontSize.xs,
     fontWeight: '500',
   },
+  timerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: designStyles.spacing.md,
+  },
+  controlButton: {
+    padding: designStyles.spacing.sm,
+    borderRadius: designStyles.borderRadius.lg,
+  },
   frequencyChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: designStyles.spacing.md,
+    paddingVertical: designStyles.spacing.xs,
+    borderRadius: designStyles.borderRadius.full,
   },
   frequencyText: {
-    fontSize: 11,
+    fontSize: designStyles.fontSize.xs,
+    fontWeight: '500',
+    color: '#FFFFFF',
     textTransform: 'capitalize',
-  },
-  timerActions: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  manualTriggerButton: {
-    width: '100%',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: designStyles.spacing.xxxl,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: designStyles.spacing.xxl,
+    ...designStyles.shadow.lg,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: designStyles.fontSize.xxl,
+    fontWeight: '700',
+    marginBottom: designStyles.spacing.sm,
   },
   emptySubtitle: {
-    fontSize: 16,
+    fontSize: designStyles.fontSize.md,
     textAlign: 'center',
     lineHeight: 24,
   },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
+  bottomNav: {
+    borderTopLeftRadius: designStyles.borderRadius.xxl,
+    borderTopRightRadius: designStyles.borderRadius.xxl,
+    ...designStyles.shadow.xl,
+  },
+  navButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: designStyles.spacing.xxl,
+    paddingVertical: designStyles.spacing.lg,
+  },
+  navButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: designStyles.spacing.xs,
+    paddingHorizontal: designStyles.spacing.xxl,
+    paddingVertical: designStyles.spacing.md,
+    borderRadius: designStyles.borderRadius.xxl,
+    minWidth: 80,
+  },
+  navButtonText: {
+    fontSize: designStyles.fontSize.xs,
+    fontWeight: '600',
   },
   fab: {
+    position: 'absolute',
+    bottom: 100,
+    right: designStyles.spacing.lg,
     width: 56,
     height: 56,
     borderRadius: 28,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...designStyles.shadow.lg,
   },
 });
