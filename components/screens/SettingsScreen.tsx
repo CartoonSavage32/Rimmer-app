@@ -1,4 +1,4 @@
-import { Bell, Check, Monitor, Moon, Sun, X } from 'lucide-react-native';
+import { Bell, Check, Clock, Monitor, Moon, Sun, X } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
@@ -15,8 +15,13 @@ const THEME_OPTIONS = [
   { value: 'system', icon: Monitor, label: 'System' },
 ] as const;
 
+const TIME_FORMAT_OPTIONS = [
+  { value: '12h', label: '12 Hour (AM/PM)' },
+  { value: '24h', label: '24 Hour' },
+] as const;
+
 export const SettingsScreen: React.FC = () => {
-  const { state, setTheme, setScreen } = useApp();
+  const { state, setTheme, setTimeFormat, setScreen } = useApp();
   const { settings, isDark } = state;
 
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
@@ -35,6 +40,14 @@ export const SettingsScreen: React.FC = () => {
       await setTheme(theme);
     } catch (error) {
       Alert.alert('Error', 'Failed to update theme. Please try again.');
+    }
+  };
+
+  const handleTimeFormatChange = async (format: '12h' | '24h') => {
+    try {
+      await setTimeFormat(format);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update time format. Please try again.');
     }
   };
 
@@ -92,6 +105,40 @@ export const SettingsScreen: React.FC = () => {
                       {label}
                     </Text>
                     {settings.theme === value && (
+                      <Check size={18} color="#FFFFFF" />
+                    )}
+                  </View>
+                }
+              />
+            ))}
+          </View>
+        </Card>
+
+        <Card style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+            Time Format
+          </Text>
+          
+          <View style={styles.timeFormatOptions}>
+            {TIME_FORMAT_OPTIONS.map(({ value, label }) => (
+              <Button
+                key={value}
+                title=""
+                onPress={() => handleTimeFormatChange(value)}
+                variant={settings.timeFormat === value ? 'primary' : 'outline'}
+                style={styles.timeFormatButton}
+                icon={
+                  <View style={styles.timeFormatButtonContent}>
+                    <Clock size={18} color={settings.timeFormat === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')} />
+                    <Text style={[
+                      styles.timeFormatButtonText,
+                      {
+                        color: settings.timeFormat === value ? '#FFFFFF' : (isDark ? '#D1D5DB' : '#374151')
+                      }
+                    ]}>
+                      {label}
+                    </Text>
+                    {settings.timeFormat === value && (
                       <Check size={18} color="#FFFFFF" />
                     )}
                   </View>
@@ -191,6 +238,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   themeButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  timeFormatOptions: {
+    gap: 8,
+  },
+  timeFormatButton: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: 16,
+  },
+  timeFormatButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  timeFormatButtonText: {
     fontSize: 16,
     fontWeight: '500',
     flex: 1,

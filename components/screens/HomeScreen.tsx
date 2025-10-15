@@ -1,19 +1,44 @@
-import { Bell, Clock, Plus } from 'lucide-react-native';
-import React from 'react';
+import { Bell, Clock, Edit, Play, Plus, Square } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { Timer } from '../../types';
+import { formatFrequency, formatTime } from '../../utils/timeUtils';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { IconButton } from '../ui/IconButton';
 import { Switch } from '../ui/Switch';
+import { TimerCountdown } from '../ui/TimerCountdown';
+import { EditScreen } from './EditScreen';
+import { NotificationsScreen } from './NotificationsScreen';
 
 export const HomeScreen: React.FC = () => {
-  const { state, toggleTimer, setScreen } = useApp();
-  const { timers, isDark } = state;
+  const { state, toggleTimer, startTimer, stopTimer, setScreen } = useApp();
+  const { timers, isDark, settings, currentScreen } = state;
+  const [editingTimer, setEditingTimer] = useState<Timer | null>(null);
+
+  const handleEditTimer = (timer: Timer) => {
+    if (timer.isRunning) {
+      // Don't allow editing running timers
+      return;
+    }
+    setEditingTimer(timer);
+  };
+
+  const handleManualTrigger = (timer: Timer) => {
+    if (timer.isRunning) {
+      stopTimer(timer.id);
+    } else {
+      startTimer(timer.id);
+    }
+  };
 
   const renderTimer = ({ item: timer }: { item: Timer }) => (
     <Card key={timer.id} style={styles.timerCard} variant="elevated">
+      {timer.isRunning && (
+        <TimerCountdown timer={timer} isDark={isDark} />
+      )}
+      
       <View style={styles.timerHeader}>
         <View style={styles.timerInfo}>
           <Text style={[styles.timerName, { color: isDark ? '#F9FAFB' : '#111827' }]}>
@@ -26,11 +51,20 @@ export const HomeScreen: React.FC = () => {
             </Text>
           </View>
         </View>
-        <Switch
-          value={timer.enabled}
-          onValueChange={() => toggleTimer(timer.id)}
-          size="medium"
-        />
+        <View style={styles.timerControls}>
+          <IconButton
+            icon={<Edit size={16} color={timer.isRunning ? '#9CA3AF' : (isDark ? '#9CA3AF' : '#6B7280')} />}
+            onPress={() => handleEditTimer(timer)}
+            variant="ghost"
+            size="small"
+            disabled={timer.isRunning}
+          />
+          <Switch
+            value={timer.enabled}
+            onValueChange={() => toggleTimer(timer.id)}
+            size="medium"
+          />
+        </View>
       </View>
       
       <View style={styles.timerTimes}>
@@ -44,7 +78,7 @@ export const HomeScreen: React.FC = () => {
           >
             <Bell size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
             <Text style={[styles.timeText, { color: isDark ? '#D1D5DB' : '#374151' }]}>
-              {time}
+              {formatTime(time, settings.timeFormat)}
             </Text>
           </View>
         ))}
@@ -55,12 +89,39 @@ export const HomeScreen: React.FC = () => {
           ]}
         >
           <Text style={[styles.frequencyText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-            {timer.frequency}
+            {formatFrequency(timer.frequency, timer.customDays)}
           </Text>
         </View>
       </View>
+
+      <View style={styles.timerActions}>
+        <Button
+          title={timer.isRunning ? 'Stop Timer' : 'Start Timer'}
+          onPress={() => handleManualTrigger(timer)}
+          variant={timer.isRunning ? 'outline' : 'primary'}
+          size="small"
+          icon={timer.isRunning ? 
+            <Square size={16} color={isDark ? '#9CA3AF' : '#6B7280'} /> : 
+            <Play size={16} color="#FFFFFF" />
+          }
+          style={styles.manualTriggerButton}
+        />
+      </View>
     </Card>
   );
+
+  if (editingTimer) {
+    return (
+      <EditScreen
+        timer={editingTimer}
+        onClose={() => setEditingTimer(null)}
+      />
+    );
+  }
+
+  if (currentScreen === 'notifications') {
+    return <NotificationsScreen />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
@@ -68,11 +129,18 @@ export const HomeScreen: React.FC = () => {
         <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
           Timers
         </Text>
-        <IconButton
-          icon={<Bell size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-          onPress={() => setScreen('settings')}
-          variant="ghost"
-        />
+        <View style={styles.headerActions}>
+          <IconButton
+            icon={<Bell size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
+            onPress={() => setScreen('notifications')}
+            variant="ghost"
+          />
+          <IconButton
+            icon={<Clock size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
+            onPress={() => setScreen('settings')}
+            variant="ghost"
+          />
+        </View>
       </View>
 
       <View style={styles.content}>
@@ -97,7 +165,7 @@ export const HomeScreen: React.FC = () => {
         )}
       </View>
 
-      <View style={styles.fabContainer}>
+    <View style={styles.fabContainer}>
         <Button
           title=""
           onPress={() => setScreen('create')}
@@ -144,6 +212,16 @@ const styles = StyleSheet.create({
   timerInfo: {
     flex: 1,
   },
+  timerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   timerName: {
     fontSize: 18,
     fontWeight: '600',
@@ -182,6 +260,15 @@ const styles = StyleSheet.create({
   frequencyText: {
     fontSize: 11,
     textTransform: 'capitalize',
+  },
+  timerActions: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  manualTriggerButton: {
+    width: '100%',
   },
   emptyState: {
     flex: 1,

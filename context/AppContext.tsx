@@ -21,6 +21,8 @@ type AppAction =
   | { type: 'UPDATE_TIMER'; payload: Timer }
   | { type: 'DELETE_TIMER'; payload: string }
   | { type: 'TOGGLE_TIMER'; payload: string }
+  | { type: 'START_TIMER'; payload: string }
+  | { type: 'STOP_TIMER'; payload: string }
   | { type: 'SET_SETTINGS'; payload: AppSettings };
 
 const initialState: AppState = {
@@ -28,6 +30,7 @@ const initialState: AppState = {
   settings: {
     theme: 'system',
     notificationsEnabled: false,
+    timeFormat: '24h',
   },
   currentScreen: 'home',
   isDark: false,
@@ -69,6 +72,34 @@ function appReducer(state: AppState, action: AppAction): AppState {
             : timer
         ),
       };
+    case 'START_TIMER':
+      return {
+        ...state,
+        timers: state.timers.map(timer =>
+          timer.id === action.payload
+            ? { 
+                ...timer, 
+                isRunning: true, 
+                remainingTime: timer.duration * 60,
+                updatedAt: new Date()
+              }
+            : timer
+        ),
+      };
+    case 'STOP_TIMER':
+      return {
+        ...state,
+        timers: state.timers.map(timer =>
+          timer.id === action.payload
+            ? { 
+                ...timer, 
+                isRunning: false, 
+                remainingTime: undefined,
+                updatedAt: new Date()
+              }
+            : timer
+        ),
+      };
     case 'SET_SETTINGS':
       return { ...state, settings: action.payload };
     default:
@@ -83,8 +114,11 @@ interface AppContextType {
   updateTimer: (timer: Timer) => Promise<void>;
   deleteTimer: (id: string) => Promise<void>;
   toggleTimer: (id: string) => Promise<void>;
+  startTimer: (id: string) => void;
+  stopTimer: (id: string) => void;
   setScreen: (screen: Screen) => void;
   setTheme: (theme: Theme) => Promise<void>;
+  setTimeFormat: (format: '12h' | '24h') => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -104,6 +138,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     loadAppData();
   }, []);
+
+  // Background timer management
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const runningTimers = state.timers.filter(timer => timer.isRunning);
+      
+      if (runningTimers.length > 0) {
+        const updatedTimers = state.timers.map(timer => {
+          if (timer.isRunning && timer.remainingTime !== undefined) {
+            const newRemainingTime = Math.max(0, timer.remainingTime - 1);
+            
+            if (newRemainingTime === 0) {
+              // Timer finished
+              return {
+                ...timer,
+                isRunning: false,
+                remainingTime: undefined,
+                updatedAt: new Date()
+              };
+            }
+            
+            return {
+              ...timer,
+              remainingTime: newRemainingTime,
+              updatedAt: new Date()
+            };
+          }
+          return timer;
+        });
+        
+        dispatch({ type: 'SET_TIMERS', payload: updatedTimers });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [state.timers]);
 
   // Update dark mode when theme changes
   useEffect(() => {
@@ -236,6 +306,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const setTimeFormat = async (format: '12h' | '24h') => {
+    const newSettings = { ...state.settings, timeFormat: format };
+    dispatch({ type: 'SET_SETTINGS', payload: newSettings });
+    
+    try {
+      await AsyncStorage.setItem('settings', JSON.stringify(newSettings));
+    } catch (error) {
+      console.error('Error saving time format:', error);
+    }
+  };
+
+  const startTimer = (id: string) => {
+    dispatch({ type: 'START_TIMER', payload: id });
+  };
+
+  const stopTimer = (id: string) => {
+    dispatch({ type: 'STOP_TIMER', payload: id });
+  };
+
   const value: AppContextType = {
     state,
     dispatch,
@@ -243,8 +332,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateTimer,
     deleteTimer,
     toggleTimer,
+    startTimer,
+    stopTimer,
     setScreen,
     setTheme,
+    setTimeFormat,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

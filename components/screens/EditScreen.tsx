@@ -1,8 +1,8 @@
-import { Plus, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { NewTimer, TimerDuration } from '../../types';
+import { Timer, TimerDuration } from '../../types';
 import { durationToMinutes, minutesToDuration } from '../../utils/timeUtils';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -12,26 +12,27 @@ import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
 import { TimePicker } from '../ui/TimePicker';
 
-export const CreateScreen: React.FC = () => {
-  const { state, addTimer, setScreen, setTimeFormat } = useApp();
+interface EditScreenProps {
+  timer: Timer;
+  onClose: () => void;
+}
+
+export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
+  const { state, updateTimer, setTimeFormat } = useApp();
   const { isDark, settings } = state;
 
-  const [newTimer, setNewTimer] = useState<NewTimer>({
-    name: '',
-    duration: 3,
-    times: ['09:00'],
-    frequency: 'daily',
-    customDays: [],
-  });
+  const [editedTimer, setEditedTimer] = useState<Timer>(timer);
+  const [duration, setDuration] = useState<TimerDuration>(minutesToDuration(timer.duration));
+  const [errors, setErrors] = useState<Partial<Timer>>({});
 
-  const [duration, setDuration] = useState<TimerDuration>(minutesToDuration(3));
-
-  const [errors, setErrors] = useState<Partial<NewTimer>>({});
+  useEffect(() => {
+    setDuration(minutesToDuration(timer.duration));
+  }, [timer.duration]);
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!newTimer.name.trim()) {
+    if (!editedTimer.name.trim()) {
       newErrors.name = 'Timer name is required';
     }
 
@@ -40,11 +41,11 @@ export const CreateScreen: React.FC = () => {
       newErrors.duration = 'Duration must be between 1 minute and 24 hours';
     }
 
-    if (newTimer.times.length === 0) {
+    if (editedTimer.times.length === 0) {
       newErrors.times = 'At least one time is required';
     }
 
-    if (newTimer.frequency === 'custom' && (!newTimer.customDays || newTimer.customDays.length === 0)) {
+    if (editedTimer.frequency === 'custom' && (!editedTimer.customDays || editedTimer.customDays.length === 0)) {
       newErrors.customDays = 'Please select at least one day for custom frequency';
     }
 
@@ -52,54 +53,55 @@ export const CreateScreen: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAddTime = () => {
-    setNewTimer({
-      ...newTimer,
-      times: [...newTimer.times, '12:00'],
-    });
-  };
-
-  const handleRemoveTime = (index: number) => {
-    if (newTimer.times.length > 1) {
-      const newTimes = newTimer.times.filter((_, i) => i !== index);
-      setNewTimer({ ...newTimer, times: newTimes });
-    }
-  };
-
-  const handleTimeChange = (index: number, time: string) => {
-    const newTimes = [...newTimer.times];
-    newTimes[index] = time;
-    setNewTimer({ ...newTimer, times: newTimes });
-  };
-
   const handleDurationChange = (newDuration: TimerDuration) => {
     setDuration(newDuration);
-    setNewTimer({
-      ...newTimer,
+    setEditedTimer({
+      ...editedTimer,
       duration: durationToMinutes(newDuration),
     });
   };
 
+  const handleTimeChange = (index: number, time: string) => {
+    const newTimes = [...editedTimer.times];
+    newTimes[index] = time;
+    setEditedTimer({ ...editedTimer, times: newTimes });
+  };
+
+  const handleAddTime = () => {
+    setEditedTimer({
+      ...editedTimer,
+      times: [...editedTimer.times, '12:00'],
+    });
+  };
+
+  const handleRemoveTime = (index: number) => {
+    if (editedTimer.times.length > 1) {
+      const newTimes = editedTimer.times.filter((_, i) => i !== index);
+      setEditedTimer({ ...editedTimer, times: newTimes });
+    }
+  };
+
   const handleFrequencyChange = (frequency: 'daily' | 'weekdays' | 'weekends' | 'custom', customDays?: number[]) => {
-    setNewTimer({
-      ...newTimer,
+    setEditedTimer({
+      ...editedTimer,
       frequency,
       customDays: customDays || [],
     });
   };
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!validateForm()) return;
 
     try {
-      const timerToCreate = {
-        ...newTimer,
+      const timerToUpdate = {
+        ...editedTimer,
         duration: durationToMinutes(duration),
+        updatedAt: new Date(),
       };
-      await addTimer(timerToCreate);
-      setScreen('home');
+      await updateTimer(timerToUpdate);
+      onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create timer. Please try again.');
+      Alert.alert('Error', 'Failed to update timer. Please try again.');
     }
   };
 
@@ -107,11 +109,11 @@ export const CreateScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-          New Timer
+          Edit Timer
         </Text>
         <IconButton
           icon={<X size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-          onPress={() => setScreen('home')}
+          onPress={onClose}
           variant="ghost"
         />
       </View>
@@ -120,8 +122,8 @@ export const CreateScreen: React.FC = () => {
         <Card style={styles.section}>
           <Input
             label="Timer Name"
-            value={newTimer.name}
-            onChangeText={(text) => setNewTimer({ ...newTimer, name: text })}
+            value={editedTimer.name}
+            onChangeText={(text) => setEditedTimer({ ...editedTimer, name: text })}
             placeholder="e.g., Morning Meditation"
             error={errors.name}
           />
@@ -138,40 +140,39 @@ export const CreateScreen: React.FC = () => {
             Notification Times
           </Text>
           
-          {newTimer.times.map((time, index) => (
-            <View key={index} style={styles.timeRow}>
-              <TimePicker
-                value={time}
-                onChange={(newTime) => handleTimeChange(index, newTime)}
-                format={settings.timeFormat}
-                onFormatChange={setTimeFormat}
-                isDark={isDark}
-                error={typeof errors.times === 'string' ? errors.times : undefined}
-                showFormatToggle={index === 0}
-              />
-              {newTimer.times.length > 1 && (
-                <IconButton
-                  icon={<X size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
-                  onPress={() => handleRemoveTime(index)}
-                  variant="ghost"
-                  size="small"
-                />
-              )}
-            </View>
-          ))}
+           {editedTimer.times.map((time, index) => (
+             <View key={index} style={styles.timeRow}>
+               <TimePicker
+                 value={time}
+                 onChange={(newTime) => handleTimeChange(index, newTime)}
+                 format={settings.timeFormat}
+                 onFormatChange={setTimeFormat}
+                 isDark={isDark}
+                 error={typeof errors.times === 'string' ? errors.times : undefined}
+                 showFormatToggle={index === 0}
+               />
+               {editedTimer.times.length > 1 && (
+                 <IconButton
+                   icon={<X size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
+                   onPress={() => handleRemoveTime(index)}
+                   variant="ghost"
+                   size="small"
+                 />
+               )}
+             </View>
+           ))}
 
           <Button
             title="Add Time"
             onPress={handleAddTime}
             variant="outline"
-            icon={<Plus size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />}
             style={styles.addTimeButton}
           />
         </Card>
 
         <FrequencyPicker
-          frequency={newTimer.frequency}
-          customDays={newTimer.customDays}
+          frequency={editedTimer.frequency}
+          customDays={editedTimer.customDays}
           onChange={handleFrequencyChange}
           isDark={isDark}
         />
@@ -179,10 +180,10 @@ export const CreateScreen: React.FC = () => {
 
       <View style={styles.footer}>
         <Button
-          title="Create Timer"
-          onPress={handleCreate}
-          style={styles.createButton}
-          disabled={!newTimer.name.trim()}
+          title="Save Changes"
+          onPress={handleSave}
+          style={styles.saveButton}
+          disabled={!editedTimer.name.trim()}
         />
       </View>
     </View>
@@ -223,31 +224,15 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
-  timeInput: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  timeInputField: {
-    textAlign: 'center',
-  },
   addTimeButton: {
     marginTop: 8,
-  },
-  frequencyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  frequencyButton: {
-    flex: 1,
-    minWidth: '45%',
   },
   footer: {
     paddingHorizontal: 20,
     paddingBottom: 30,
     paddingTop: 20,
   },
-  createButton: {
+  saveButton: {
     width: '100%',
   },
 });
