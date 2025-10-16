@@ -1,6 +1,7 @@
 import { Clock } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { ToggleSwitch } from './ToggleSwitch';
 
@@ -16,6 +17,9 @@ interface TimePickerProps {
 const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 3;
 
+// Get screen dimensions for responsive design
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export const TimePicker: React.FC<TimePickerProps> = ({
   time,
   onTimeChange,
@@ -25,6 +29,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   timeFormat,
 }) => {
   const colors = getDesignColors(isDark);
+  const insets = useSafeAreaInsets();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTime, setSelectedTime] = useState(time);
   const [selectedHours, setSelectedHours] = useState(0);
@@ -198,9 +203,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         transparent
         animationType="slide"
         onRequestClose={handleCancel}
+        statusBarTranslucent
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.bg }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.bg, paddingBottom: insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Time</Text>
               {showFormatToggle && onFormatChange && (
@@ -268,6 +274,8 @@ const styles = StyleSheet.create({
     padding: designStyles.spacing.lg,
     borderRadius: designStyles.borderRadius.lg,
     gap: designStyles.spacing.sm,
+    minHeight: 50,
+    flex: 1,
   },
   timeText: {
     fontSize: designStyles.fontSize.md,
@@ -282,7 +290,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: designStyles.borderRadius.xxl,
     borderTopRightRadius: designStyles.borderRadius.xxl,
     padding: designStyles.spacing.xxl,
-    maxHeight: '70%',
+    maxHeight: screenHeight * 0.7,
+    minHeight: screenHeight * 0.5,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -307,9 +316,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: designStyles.spacing.xxl,
+    paddingHorizontal: designStyles.spacing.sm,
   },
   wheelContainer: {
     alignItems: 'center',
+    flex: 1,
+    maxWidth: screenWidth * 0.25,
   },
   wheelLabel: {
     fontSize: designStyles.fontSize.sm,
@@ -318,7 +330,7 @@ const styles = StyleSheet.create({
   },
   wheel: {
     height: ITEM_HEIGHT * VISIBLE_ITEMS,
-    width: 80,
+    width: Math.min(80, screenWidth * 0.2),
     borderRadius: designStyles.borderRadius.lg,
     overflow: 'hidden',
   },

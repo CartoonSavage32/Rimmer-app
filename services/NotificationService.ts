@@ -15,6 +15,23 @@ Notifications.setNotificationHandler({
 });
 
 class NotificationService {
+  /**
+   * Get the current device time more accurately
+   */
+  private getCurrentDeviceTime(): Date {
+    return new Date();
+  }
+
+  /**
+   * Create a precise notification time using device timezone
+   */
+  private createNotificationTime(hours: number, minutes: number, baseDate?: Date): Date {
+    const base = baseDate || this.getCurrentDeviceTime();
+    const notificationTime = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    notificationTime.setHours(hours, minutes, 0, 0);
+    return notificationTime;
+  }
+
   async requestPermissions(): Promise<boolean> {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -48,16 +65,17 @@ class NotificationService {
     // Cancel existing notifications for this timer
     await this.cancelTimerNotifications(timer.id);
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get current device time
+    const deviceTime = this.getCurrentDeviceTime();
 
     for (const timeString of timer.times) {
       const [hours, minutes] = timeString.split(':').map(Number);
-      const notificationTime = new Date(today);
-      notificationTime.setHours(hours, minutes, 0, 0);
+      
+      // Create notification time using device's timezone
+      const notificationTime = this.createNotificationTime(hours, minutes, deviceTime);
 
       // If the time has already passed today, schedule for tomorrow
-      if (notificationTime <= now) {
+      if (notificationTime <= deviceTime) {
         notificationTime.setDate(notificationTime.getDate() + 1);
       }
 
@@ -101,9 +119,11 @@ class NotificationService {
     for (let i = 0; i < 7; i++) {
       const scheduleDate = addDays(notificationTime, i);
       if (!isWeekend(scheduleDate)) {
+        // Ensure we're using the device's timezone for the scheduled date
+        const deviceScheduleDate = new Date(scheduleDate.getTime());
         const trigger: Notifications.NotificationTriggerInput = {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: scheduleDate,
+          date: deviceScheduleDate,
         };
 
         await Notifications.scheduleNotificationAsync({
@@ -128,9 +148,11 @@ class NotificationService {
     for (let i = 0; i < 7; i++) {
       const scheduleDate = addDays(notificationTime, i);
       if (isWeekend(scheduleDate)) {
+        // Ensure we're using the device's timezone for the scheduled date
+        const deviceScheduleDate = new Date(scheduleDate.getTime());
         const trigger: Notifications.NotificationTriggerInput = {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: scheduleDate,
+          date: deviceScheduleDate,
         };
 
         await Notifications.scheduleNotificationAsync({

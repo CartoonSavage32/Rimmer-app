@@ -1,6 +1,7 @@
 import { Bell, Clock, Edit2, Plus, Settings } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { Timer } from '../../types';
@@ -17,6 +18,7 @@ export const HomeScreen: React.FC = () => {
   const [editingTimer, setEditingTimer] = useState<Timer | null>(null);
   const [runningTimerId, setRunningTimerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'timers' | 'notifications' | 'settings'>('timers');
+  const insets = useSafeAreaInsets();
   
   const colors = getDesignColors(isDark);
 
@@ -167,7 +169,7 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: colors.surface }]}>
+      <View style={[styles.bottomNav, { backgroundColor: colors.surface, paddingBottom: insets.bottom }]}>
         <View style={styles.navButtons}>
           <TouchableOpacity
             onPress={() => setActiveTab('timers')}
@@ -223,7 +225,7 @@ export const HomeScreen: React.FC = () => {
       {activeTab === 'timers' && (
         <TouchableOpacity
           onPress={() => setScreen('create')}
-          style={[styles.fab, { backgroundColor: colors.accent }]}
+          style={[styles.fab, { backgroundColor: colors.accent, bottom: insets.bottom + 20 }]}
         >
           <Plus size={24} color="#FFFFFF" />
         </TouchableOpacity>

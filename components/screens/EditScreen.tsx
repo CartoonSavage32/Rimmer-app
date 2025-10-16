@@ -1,6 +1,7 @@
 import { Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { Timer, TimerDuration } from '../../types';
@@ -19,6 +20,7 @@ interface EditScreenProps {
 export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
   const { state, updateTimer, deleteTimer, setTimeFormat } = useApp();
   const { isDark, settings } = state;
+  const insets = useSafeAreaInsets();
   const colors = getDesignColors(isDark);
 
   const [editedTimer, setEditedTimer] = useState<Timer>(timer);
@@ -234,7 +236,7 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
       </ScrollView>
 
       {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           onPress={handleSave}
           style={[styles.saveButton, { backgroundColor: colors.primary }]}
@@ -350,6 +352,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: designStyles.spacing.md,
+    minHeight: 60,
   },
   timeInput: {
     flex: 1,
@@ -363,6 +366,10 @@ const styles = StyleSheet.create({
     padding: designStyles.spacing.lg,
     borderRadius: designStyles.borderRadius.xl,
     borderWidth: 1,
+    minWidth: 50,
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addTimeButton: {
     flexDirection: 'row',
@@ -373,6 +380,7 @@ const styles = StyleSheet.create({
     borderRadius: designStyles.borderRadius.xl,
     borderWidth: 2,
     borderStyle: 'dashed',
+    minHeight: 60,
   },
   addTimeText: {
     fontSize: designStyles.fontSize.md,
