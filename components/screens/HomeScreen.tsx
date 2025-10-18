@@ -19,7 +19,7 @@ export const HomeScreen: React.FC = () => {
   const [runningTimerId, setRunningTimerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'timers' | 'notifications' | 'settings'>('timers');
   const insets = useSafeAreaInsets();
-  
+
   const colors = getDesignColors(isDark);
 
   const handleEditTimer = (timer: Timer) => {
@@ -158,8 +158,8 @@ export const HomeScreen: React.FC = () => {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.text }]}>
-          {activeTab === 'timers' ? 'Timers' : 
-           activeTab === 'notifications' ? 'Notifications' : 'Settings'}
+          {activeTab === 'timers' ? 'Timers' :
+            activeTab === 'notifications' ? 'Notifications' : 'Settings'}
         </Text>
       </View>
 
@@ -178,7 +178,7 @@ export const HomeScreen: React.FC = () => {
               activeTab === 'timers' && { backgroundColor: colors.primary }
             ]}
           >
-            <Clock size={24} color={activeTab === 'timers' ? '#FFFFFF' : colors.text} />
+            <Clock size={20} color={activeTab === 'timers' ? '#FFFFFF' : colors.text} />
             <Text style={[
               styles.navButtonText,
               { color: activeTab === 'timers' ? '#FFFFFF' : colors.text }
@@ -194,7 +194,7 @@ export const HomeScreen: React.FC = () => {
               activeTab === 'notifications' && { backgroundColor: colors.primary }
             ]}
           >
-            <Bell size={24} color={activeTab === 'notifications' ? '#FFFFFF' : colors.text} />
+            <Bell size={20} color={activeTab === 'notifications' ? '#FFFFFF' : colors.text} />
             <Text style={[
               styles.navButtonText,
               { color: activeTab === 'notifications' ? '#FFFFFF' : colors.text }
@@ -210,7 +210,7 @@ export const HomeScreen: React.FC = () => {
               activeTab === 'settings' && { backgroundColor: colors.primary }
             ]}
           >
-            <Settings size={24} color={activeTab === 'settings' ? '#FFFFFF' : colors.text} />
+            <Settings size={20} color={activeTab === 'settings' ? '#FFFFFF' : colors.text} />
             <Text style={[
               styles.navButtonText,
               { color: activeTab === 'settings' ? '#FFFFFF' : colors.text }
@@ -225,7 +225,7 @@ export const HomeScreen: React.FC = () => {
       {activeTab === 'timers' && (
         <TouchableOpacity
           onPress={() => setScreen('create')}
-          style={[styles.fab, { backgroundColor: colors.accent, bottom: insets.bottom + 20 }]}
+          style={[styles.fab, { backgroundColor: colors.accent, bottom: insets.bottom + 80 }]}
         >
           <Plus size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: designStyles.spacing.lg,
-    paddingTop: 20,
+    paddingTop: 15,
     paddingBottom: designStyles.spacing.sm,
     marginHorizontal: designStyles.spacing.sm,
     marginTop: designStyles.spacing.xs,
@@ -250,6 +250,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: designStyles.fontSize.lg,
     fontWeight: '700',
+    textAlign: 'center',
   },
   content: {
     flex: 1,
@@ -257,10 +258,11 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     paddingHorizontal: designStyles.spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   timersList: {
     paddingTop: designStyles.spacing.sm,
+    paddingBottom: 100, // Safe zone for FAB
   },
   timerCard: {
     borderRadius: designStyles.borderRadius.xl,
@@ -364,17 +366,19 @@ const styles = StyleSheet.create({
   navButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: designStyles.spacing.xxl,
-    paddingVertical: designStyles.spacing.lg,
+    paddingHorizontal: designStyles.spacing.lg,
+    paddingVertical: designStyles.spacing.sm,
+    paddingTop: designStyles.spacing.md,
   },
   navButton: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: designStyles.spacing.xs,
-    paddingHorizontal: designStyles.spacing.xxl,
-    paddingVertical: designStyles.spacing.md,
-    borderRadius: designStyles.borderRadius.xxl,
-    minWidth: 80,
+    gap: 4,
+    paddingHorizontal: designStyles.spacing.md,
+    paddingVertical: designStyles.spacing.sm,
+    borderRadius: designStyles.borderRadius.lg,
+    minWidth: 60,
+    minHeight: 50,
   },
   navButtonText: {
     fontSize: designStyles.fontSize.xs,
@@ -382,7 +386,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 100,
     right: designStyles.spacing.lg,
     width: 56,
     height: 56,

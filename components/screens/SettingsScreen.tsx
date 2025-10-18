@@ -50,7 +50,7 @@ export const SettingsScreen: React.FC = () => {
       if (!hasPermission) {
         Alert.alert(
           'Permission Required',
-          'Please enable notifications in your device settings to use timer reminders.',
+          'Please enable notifications in your device settings to use Rimmer timers.',
           [{ text: 'OK' }]
         );
         return;
@@ -152,7 +152,7 @@ export const SettingsScreen: React.FC = () => {
               <View style={styles.settingHeader}>
                 <Bell size={20} color={colors.text} />
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  Timer Reminders
+                  Rimmer Timers
                 </Text>
               </View>
               <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>

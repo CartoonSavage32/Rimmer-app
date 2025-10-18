@@ -1,6 +1,6 @@
 import { Minus, Plus } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { Input } from './Input';
 
@@ -16,6 +16,13 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
   isDark,
 }) => {
   const colors = getDesignColors(isDark);
+  const screenWidth = Dimensions.get('window').width;
+  
+  // Calculate dynamic sizes based on screen width
+  const availableWidth = screenWidth - (designStyles.spacing.lg * 2) - (designStyles.spacing.sm * 2); // Account for padding and gaps
+  const columnWidth = Math.max(80, availableWidth / 3 - designStyles.spacing.sm);
+  const inputWidth = Math.max(60, columnWidth - 20); // Leave some margin
+  const buttonSize = Math.max(35, Math.min(45, inputWidth * 0.7));
 
   const updateDuration = (field: 'hours' | 'minutes' | 'seconds', value: number) => {
     const newDuration = { ...duration, [field]: Math.max(0, value) };
@@ -40,28 +47,53 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
   const formatTime = (value: number) => value.toString().padStart(2, '0');
 
   const renderTimeControl = (field: 'hours' | 'minutes' | 'seconds', label: string) => (
-    <View style={styles.timeColumn}>
+    <View style={[styles.timeColumn, { width: columnWidth }]}>
       <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>{label}</Text>
       
       <TouchableOpacity
         onPress={() => increment(field)}
-        style={[styles.controlButton, { backgroundColor: colors.inputBg }]}
+        style={[
+          styles.controlButton, 
+          { 
+            backgroundColor: colors.inputBg,
+            width: buttonSize,
+            height: buttonSize,
+            borderRadius: buttonSize / 2
+          }
+        ]}
       >
-        <Plus size={20} color={colors.text} />
+        <Plus size={Math.max(16, buttonSize * 0.4)} color={colors.text} />
       </TouchableOpacity>
 
       <Input
         value={formatTime(duration[field])}
         onChangeText={(value) => handleInputChange(field, value)}
         keyboardType="numeric"
-        style={StyleSheet.flatten([styles.timeInput, { backgroundColor: colors.inputBg, color: colors.text, textAlign: 'center' }])}
+        style={StyleSheet.flatten([
+          styles.timeInput, 
+          { 
+            backgroundColor: colors.inputBg, 
+            color: colors.text, 
+            textAlign: 'center',
+            width: inputWidth,
+            height: buttonSize + 5
+          }
+        ])}
       />
 
       <TouchableOpacity
         onPress={() => decrement(field)}
-        style={[styles.controlButton, { backgroundColor: colors.inputBg }]}
+        style={[
+          styles.controlButton, 
+          { 
+            backgroundColor: colors.inputBg,
+            width: buttonSize,
+            height: buttonSize,
+            borderRadius: buttonSize / 2
+          }
+        ]}
       >
-        <Minus size={20} color={colors.text} />
+        <Minus size={Math.max(16, buttonSize * 0.4)} color={colors.text} />
       </TouchableOpacity>
     </View>
   );
@@ -99,31 +131,29 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: designStyles.spacing.sm,
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingHorizontal: designStyles.spacing.sm,
   },
   timeColumn: {
     alignItems: 'center',
     flex: 1,
-    minWidth: 80,
     gap: designStyles.spacing.sm,
+    paddingHorizontal: designStyles.spacing.xs,
   },
   timeLabel: {
     fontSize: designStyles.fontSize.sm,
     fontWeight: '500',
   },
   controlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeInput: {
-    width: 60,
-    height: 40,
     borderRadius: designStyles.borderRadius.md,
     fontSize: designStyles.fontSize.lg,
     fontWeight: '600',
+    textAlign: 'center',
+    paddingHorizontal: designStyles.spacing.sm,
   },
 });

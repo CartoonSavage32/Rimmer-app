@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "reminder-app",
-    "slug": "reminder-app",
+    "name": "Rimmer",
+    "slug": "rimmer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "reminderapp",
+    "scheme": "rimmer",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

@@ -1,6 +1,6 @@
-# Reminder Timer App
+# Rimmer
 
-A React Native timer reminder app built with Expo, featuring clean UI design, notification scheduling, and persistent data storage.
+A React Native timer app built with Expo, featuring clean UI design, notification scheduling, and persistent data storage.
 
 ## Features
 

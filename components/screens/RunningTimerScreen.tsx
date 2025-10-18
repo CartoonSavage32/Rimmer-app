@@ -2,10 +2,10 @@ import { ChevronLeft, Pause, Play, RotateCcw } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedProps,
-    useSharedValue,
-    withTiming,
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { designStyles, getDesignColors } from '../../constants/design';
@@ -116,32 +116,32 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
               strokeWidth="8"
               fill="none"
             />
-             <AnimatedCircle
-               cx="144"
-               cy="144"
-               r="136"
-               stroke="url(#gradient)"
-               strokeWidth="8"
-               fill="none"
-               strokeLinecap="round"
-               strokeDasharray={`${2 * Math.PI * 136}`}
-               animatedProps={animatedCircleProps}
-             />
+            <AnimatedCircle
+              cx="144"
+              cy="144"
+              r="136"
+              stroke="url(#gradient)"
+              strokeWidth="8"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 136}`}
+              animatedProps={animatedCircleProps}
+            />
           </Svg>
 
           <View style={styles.timerTextContainer}>
-             <Text style={[styles.timerText, { color: colors.text }]}>
-               {(() => {
-                 const hours = Math.floor(remainingTime / 3600);
-                 const minutes = Math.floor((remainingTime % 3600) / 60);
-                 const seconds = remainingTime % 60;
-                 
-                 if (hours > 0) {
-                   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                 }
-                 return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-               })()}
-             </Text>
+            <Text style={[styles.timerText, { color: colors.text }]}>
+              {(() => {
+                const hours = Math.floor(remainingTime / 3600);
+                const minutes = Math.floor((remainingTime % 3600) / 60);
+                const seconds = remainingTime % 60;
+
+                if (hours > 0) {
+                  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+              })()}
+            </Text>
             <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>
               {timer.name}
             </Text>
@@ -183,19 +183,25 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: designStyles.spacing.xxl,
-    paddingTop: 50,
+    paddingTop: 15,
     paddingBottom: designStyles.spacing.lg,
     ...designStyles.shadow.md,
   },
   backButton: {
-    padding: designStyles.spacing.sm,
-    borderRadius: designStyles.borderRadius.lg,
-    marginRight: designStyles.spacing.lg,
+    position: 'absolute',
+    left: designStyles.spacing.sm,
+    top: 12,
+    padding: designStyles.spacing.xs,
+    borderRadius: designStyles.borderRadius.sm,
+    zIndex: 1,
   },
   headerTitle: {
-    fontSize: designStyles.fontSize.xxl,
+    fontSize: designStyles.fontSize.lg,
     fontWeight: '700',
+    textAlign: 'center',
+    flex: 1,
   },
   timerContainer: {
     flex: 1,

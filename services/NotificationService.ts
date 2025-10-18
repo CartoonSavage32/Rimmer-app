@@ -49,7 +49,7 @@ class NotificationService {
     // Configure notification channel for Android
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Reminder Timer',
+        name: 'Rimmer Timer',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
@@ -101,7 +101,7 @@ class NotificationService {
 
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Timer Reminder',
+        title: 'Rimmer Timer',
         body: `Time for ${timer.name} (${timer.duration} minutes)`,
         data: {
           timerId: timer.id,
@@ -128,7 +128,7 @@ class NotificationService {
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Timer Reminder',
+            title: 'Rimmer Timer',
             body: `Time for ${timer.name} (${timer.duration} minutes)`,
             data: {
               timerId: timer.id,
@@ -157,7 +157,7 @@ class NotificationService {
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Timer Reminder',
+            title: 'Rimmer Timer',
             body: `Time for ${timer.name} (${timer.duration} minutes)`,
             data: {
               timerId: timer.id,

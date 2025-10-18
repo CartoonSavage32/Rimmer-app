@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import { Appearance } from 'react-native';
 import { notificationService } from '../services/NotificationService';
 import { AppSettings, NewTimer, Screen, Theme, Timer } from '../types';
 
@@ -180,6 +181,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateDarkMode();
   }, [state.settings.theme]);
 
+  // Listen for system color scheme changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      if (state.settings.theme === 'system') {
+        const isDark = colorScheme === 'dark';
+        dispatch({ type: 'SET_DARK_MODE', payload: isDark });
+      }
+    });
+
+    return () => subscription?.remove();
+  }, [state.settings.theme]);
+
   const loadAppData = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -218,9 +231,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (theme === 'light') {
       isDark = false;
     } else {
-      // System theme - this would need platform-specific implementation
-      // For now, default to false
-      isDark = false;
+      // System theme - detect the actual system color scheme
+      const systemColorScheme = Appearance.getColorScheme();
+      isDark = systemColorScheme === 'dark';
     }
 
     dispatch({ type: 'SET_DARK_MODE', payload: isDark });

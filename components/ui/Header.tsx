@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: designStyles.spacing.lg,
-    paddingTop: 20,
+    paddingTop: 15,
     paddingBottom: designStyles.spacing.sm,
     marginHorizontal: designStyles.spacing.sm,
     marginTop: designStyles.spacing.xs,
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: designStyles.spacing.sm,
-    top: 20,
+    top: 12,
     padding: designStyles.spacing.xs,
     borderRadius: designStyles.borderRadius.sm,
     zIndex: 1,
