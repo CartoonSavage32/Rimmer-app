@@ -8,6 +8,7 @@ interface AppState {
   timers: Timer[];
   settings: AppSettings;
   currentScreen: Screen;
+  navigationHistory: Screen[];
   isDark: boolean;
   isLoading: boolean;
 }
@@ -15,6 +16,7 @@ interface AppState {
 type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_SCREEN'; payload: Screen }
+  | { type: 'NAVIGATE_BACK' }
   | { type: 'SET_THEME'; payload: Theme }
   | { type: 'SET_DARK_MODE'; payload: boolean }
   | { type: 'SET_TIMERS'; payload: Timer[] }
@@ -34,6 +36,7 @@ const initialState: AppState = {
     timeFormat: '24h',
   },
   currentScreen: 'home',
+  navigationHistory: ['home'],
   isDark: false,
   isLoading: true,
 };
@@ -43,7 +46,23 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_SCREEN':
-      return { ...state, currentScreen: action.payload };
+      return { 
+        ...state, 
+        currentScreen: action.payload,
+        navigationHistory: [...state.navigationHistory, action.payload]
+      };
+    case 'NAVIGATE_BACK':
+      if (state.navigationHistory.length > 1) {
+        const newHistory = [...state.navigationHistory];
+        newHistory.pop(); // Remove current screen
+        const previousScreen = newHistory[newHistory.length - 1];
+        return {
+          ...state,
+          currentScreen: previousScreen,
+          navigationHistory: newHistory
+        };
+      }
+      return state;
     case 'SET_THEME':
       return { ...state, settings: { ...state.settings, theme: action.payload } };
     case 'SET_DARK_MODE':
@@ -118,6 +137,7 @@ interface AppContextType {
   startTimer: (id: string) => void;
   stopTimer: (id: string) => void;
   setScreen: (screen: Screen) => void;
+  navigateBack: () => void;
   setTheme: (theme: Theme) => Promise<void>;
   setTimeFormat: (format: '12h' | '24h') => Promise<void>;
 }
@@ -308,6 +328,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'SET_SCREEN', payload: screen });
   };
 
+  const navigateBack = () => {
+    dispatch({ type: 'NAVIGATE_BACK' });
+  };
+
   const setTheme = async (theme: Theme) => {
     dispatch({ type: 'SET_THEME', payload: theme });
     
@@ -348,6 +372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startTimer,
     stopTimer,
     setScreen,
+    navigateBack,
     setTheme,
     setTimeFormat,
   };

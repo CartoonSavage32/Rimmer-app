@@ -22,7 +22,7 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
   timerId,
   onClose,
 }) => {
-  const { state, startTimer, stopTimer } = useApp();
+  const { state, startTimer, stopTimer, setScreen } = useApp();
   const { isDark, settings } = state;
   const colors = getDesignColors(isDark);
 
@@ -85,12 +85,17 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
     // This would need to be implemented in the context
   };
 
+  const handleClose = () => {
+    onClose();
+    setScreen('home');
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <TouchableOpacity
-          onPress={onClose}
+          onPress={handleClose}
           style={[styles.backButton, { backgroundColor: colors.surfaceHover }]}
         >
           <ChevronLeft size={24} color={colors.text} />

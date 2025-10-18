@@ -41,4 +41,4 @@ export interface NotificationData {
   duration: number;
 }
 
-export type Screen = 'home' | 'create' | 'settings' | 'notifications';
+export type Screen = 'home' | 'create' | 'settings' | 'notifications' | 'running-timer';

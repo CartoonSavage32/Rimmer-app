@@ -31,6 +31,7 @@ export const HomeScreen: React.FC = () => {
 
   const handleStartTimer = (timer: Timer) => {
     setRunningTimerId(timer.id);
+    setScreen('running-timer');
   };
 
   const TimerCard = ({ timer }: { timer: Timer }) => (
@@ -103,11 +104,14 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
-  if (runningTimerId) {
+  if (currentScreen === 'running-timer' && runningTimerId) {
     return (
       <RunningTimerScreen
         timerId={runningTimerId}
-        onClose={() => setRunningTimerId(null)}
+        onClose={() => {
+          setRunningTimerId(null);
+          setScreen('home');
+        }}
       />
     );
   }
