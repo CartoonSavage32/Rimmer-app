@@ -46,13 +46,41 @@ class NotificationService {
       return false;
     }
 
-    // Configure notification channel for Android
+    // Configure notification channels for Android
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Rimmer Timer',
+      // Timer alert channel
+      await Notifications.setNotificationChannelAsync('timer-alerts', {
+        name: 'Timer Alerts',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
+        enableLights: true,
+        enableVibrate: true,
+        showBadge: true,
+      });
+
+      // Running timer channel (persistent, silent updates)
+      await Notifications.setNotificationChannelAsync('running-timer', {
+        name: 'Running Timer',
+        importance: Notifications.AndroidImportance.LOW, // Lower importance for silent updates
+        vibrationPattern: [], // No vibration
+        lightColor: '#FF231F7C',
+        enableLights: false, // No lights
+        enableVibrate: false,
+        showBadge: false,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        sound: null, // No sound for silent updates
+      });
+
+      // Timer completion channel
+      await Notifications.setNotificationChannelAsync('timer-completion', {
+        name: 'Timer Completion',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 500, 250, 500],
+        lightColor: '#10B981',
+        enableLights: true,
+        enableVibrate: true,
+        showBadge: true,
       });
     }
 
@@ -107,8 +135,10 @@ class NotificationService {
           timerId: timer.id,
           timerName: timer.name,
           duration: timer.duration,
+          action: 'timer_alert',
         },
         sound: 'default',
+        categoryIdentifier: 'TIMER_ALERT',
       },
       trigger,
     });
@@ -134,8 +164,10 @@ class NotificationService {
               timerId: timer.id,
               timerName: timer.name,
               duration: timer.duration,
+              action: 'timer_alert',
             },
             sound: 'default',
+            categoryIdentifier: 'TIMER_ALERT',
           },
           trigger,
         });
@@ -163,8 +195,10 @@ class NotificationService {
               timerId: timer.id,
               timerName: timer.name,
               duration: timer.duration,
+              action: 'timer_alert',
             },
             sound: 'default',
+            categoryIdentifier: 'TIMER_ALERT',
           },
           trigger,
         });
@@ -189,6 +223,184 @@ class NotificationService {
 
   async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
     return await Notifications.getAllScheduledNotificationsAsync();
+  }
+
+  // Setup notification categories for interactive notifications
+  async setupNotificationCategories(): Promise<void> {
+    await Notifications.setNotificationCategoryAsync('TIMER_ALERT', [
+      {
+        identifier: 'START_TIMER',
+        buttonTitle: 'Start Timer',
+        options: {
+          isDestructive: false,
+          isAuthenticationRequired: false,
+        },
+      },
+      {
+        identifier: 'SNOOZE_TIMER',
+        buttonTitle: 'Snooze 5min',
+        options: {
+          isDestructive: false,
+          isAuthenticationRequired: false,
+        },
+      },
+    ]);
+
+    await Notifications.setNotificationCategoryAsync('RUNNING_TIMER', [
+      {
+        identifier: 'STOP_TIMER',
+        buttonTitle: 'Stop Timer',
+        options: {
+          isDestructive: true,
+          isAuthenticationRequired: false,
+        },
+      },
+    ]);
+
+    await Notifications.setNotificationCategoryAsync('TIMER_COMPLETION', [
+      {
+        identifier: 'CLEAR_NOTIFICATION',
+        buttonTitle: 'Clear',
+        options: {
+          isDestructive: false,
+          isAuthenticationRequired: false,
+        },
+      },
+    ]);
+  }
+
+  // Show persistent running timer notification
+  async showRunningTimerNotification(timer: Timer): Promise<void> {
+    const remainingMinutes = Math.floor((timer.remainingTime || 0) / 60);
+    const remainingSeconds = (timer.remainingTime || 0) % 60;
+    
+    // Use a fixed identifier for this timer's running notification
+    const notificationId = `running_timer_${timer.id}`;
+    
+    await Notifications.scheduleNotificationAsync({
+      identifier: notificationId,
+      content: {
+        title: '⏱️ Timer Running',
+        body: `${timer.name} - ${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')} remaining`,
+        data: {
+          timerId: timer.id,
+          timerName: timer.name,
+          duration: timer.duration,
+          action: 'running_timer',
+        },
+        categoryIdentifier: 'RUNNING_TIMER',
+        sticky: true, // Makes notification persistent
+        priority: Notifications.AndroidNotificationPriority.LOW, // Lower priority for silent updates
+        // Prevent notification from alerting on every update
+        sound: false,
+        vibrate: [],
+      },
+      trigger: null, // Show immediately
+    });
+  }
+
+  // Update running timer notification in place (real-time updates)
+  async updateRunningTimerNotification(timer: Timer): Promise<void> {
+    const remainingMinutes = Math.floor((timer.remainingTime || 0) / 60);
+    const remainingSeconds = (timer.remainingTime || 0) % 60;
+    
+    // Use the same fixed identifier to update the existing notification
+    const notificationId = `running_timer_${timer.id}`;
+    
+    // Dismiss the existing notification silently
+    await Notifications.dismissNotificationAsync(notificationId);
+    
+    // Schedule updated notification with same ID (silent update)
+    await Notifications.scheduleNotificationAsync({
+      identifier: notificationId,
+      content: {
+        title: '⏱️ Timer Running',
+        body: `${timer.name} - ${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')} remaining`,
+        data: {
+          timerId: timer.id,
+          timerName: timer.name,
+          duration: timer.duration,
+          action: 'running_timer',
+        },
+        categoryIdentifier: 'RUNNING_TIMER',
+        sticky: true,
+        priority: Notifications.AndroidNotificationPriority.LOW, // Lower priority for silent updates
+        // Silent update - no sound or vibration
+        sound: false,
+        vibrate: [],
+      },
+      trigger: null,
+    });
+  }
+
+  // Cancel running timer notification
+  async cancelRunningTimerNotification(timerId: string): Promise<void> {
+    const notificationId = `running_timer_${timerId}`;
+    await Notifications.cancelScheduledNotificationAsync(notificationId);
+  }
+
+  // Show timer completion notification
+  async showTimerCompletionNotification(timer: Timer): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '✅ Timer Complete!',
+        body: `${timer.name} has finished (${timer.duration} minutes)`,
+        data: {
+          timerId: timer.id,
+          timerName: timer.name,
+          duration: timer.duration,
+          action: 'timer_completion',
+        },
+        categoryIdentifier: 'TIMER_COMPLETION',
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger: null, // Show immediately
+    });
+  }
+
+  // Handle notification response (button taps)
+  async handleNotificationResponse(response: Notifications.NotificationResponse): Promise<{ action: string; timerId: string } | null> {
+    const { actionIdentifier, notification } = response;
+    const data = notification.request.content.data as any;
+
+    if (!data) return null;
+
+    switch (actionIdentifier) {
+      case 'START_TIMER':
+        // This will be handled by the app context
+        return { action: 'START_TIMER', timerId: data.timerId };
+      
+      case 'SNOOZE_TIMER':
+        // Schedule a new notification in 5 minutes
+        const snoozeTime = new Date(Date.now() + 5 * 60 * 1000);
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Rimmer Timer',
+            body: `Time for ${data.timerName} (${data.duration} minutes)`,
+            data: {
+              timerId: data.timerId,
+              timerName: data.timerName,
+              duration: data.duration,
+              action: 'timer_alert',
+            },
+            sound: 'default',
+            categoryIdentifier: 'TIMER_ALERT',
+          },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: snoozeTime },
+        });
+        return { action: 'SNOOZE_TIMER', timerId: data.timerId };
+      
+      case 'STOP_TIMER':
+        return { action: 'STOP_TIMER', timerId: data.timerId };
+      
+      case 'CLEAR_NOTIFICATION':
+        // Notification will be dismissed automatically
+        return { action: 'CLEAR_NOTIFICATION', timerId: data.timerId };
+      
+      default:
+        return null;
+    }
   }
 }
 

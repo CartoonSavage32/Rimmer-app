@@ -76,16 +76,16 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
     transform: [{ scale: pulseScale.value }],
   }));
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (isRunning) {
-      stopTimer(timerId);
+      await stopTimer(timerId);
     } else {
-      startTimer(timerId);
+      await startTimer(timerId);
     }
   };
 
-  const handleReset = () => {
-    stopTimer(timerId);
+  const handleReset = async () => {
+    await stopTimer(timerId);
     // Reset timer to original duration
     // This would need to be implemented in the context
   };

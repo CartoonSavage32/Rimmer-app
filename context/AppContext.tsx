@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { Appearance } from 'react-native';
 import { notificationService } from '../services/NotificationService';
@@ -134,8 +135,8 @@ interface AppContextType {
   updateTimer: (timer: Timer) => Promise<void>;
   deleteTimer: (id: string) => Promise<void>;
   toggleTimer: (id: string) => Promise<void>;
-  startTimer: (id: string) => void;
-  stopTimer: (id: string) => void;
+  startTimer: (id: string) => Promise<void>;
+  stopTimer: (id: string) => Promise<void>;
   setScreen: (screen: Screen) => void;
   navigateBack: () => void;
   setTheme: (theme: Theme) => Promise<void>;
@@ -158,11 +159,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load data on app start
   useEffect(() => {
     loadAppData();
+    setupNotifications();
   }, []);
+
+  // Setup notification categories and listeners
+  const setupNotifications = async () => {
+    await notificationService.setupNotificationCategories();
+    
+    // Listen for notification responses
+    const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      const result = await notificationService.handleNotificationResponse(response);
+      if (result !== null) {
+        handleNotificationAction(result);
+      }
+    });
+
+    return () => subscription.remove();
+  };
+
+  // Handle notification actions
+  const handleNotificationAction = (action: { action: string; timerId: string }) => {
+    switch (action.action) {
+      case 'START_TIMER':
+        startTimer(action.timerId);
+        break;
+      case 'STOP_TIMER':
+        stopTimer(action.timerId);
+        break;
+      case 'SNOOZE_TIMER':
+        // Timer will be snoozed automatically by the notification service
+        break;
+      case 'CLEAR_NOTIFICATION':
+        // Notification will be dismissed automatically
+        break;
+    }
+  };
 
   // Background timer management
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const runningTimers = state.timers.filter(timer => timer.isRunning);
 
       if (runningTimers.length > 0) {
@@ -171,7 +206,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const newRemainingTime = Math.max(0, timer.remainingTime - 1);
 
             if (newRemainingTime === 0) {
-              // Timer finished
+              // Timer finished - show completion notification
+              notificationService.showTimerCompletionNotification(timer);
+              notificationService.cancelRunningTimerNotification(timer.id);
+              
               return {
                 ...timer,
                 isRunning: false,
@@ -190,6 +228,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         dispatch({ type: 'SET_TIMERS', payload: updatedTimers });
+
+        // Update running timer notifications every second for real-time countdown
+        for (const timer of runningTimers) {
+          if (timer.remainingTime !== undefined && timer.remainingTime > 0) {
+            await notificationService.updateRunningTimerNotification(timer);
+          }
+        }
       }
     }, 1000);
 
@@ -354,12 +399,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const startTimer = (id: string) => {
+  const startTimer = async (id: string) => {
     dispatch({ type: 'START_TIMER', payload: id });
+    
+    // Show running timer notification
+    const timer = state.timers.find(t => t.id === id);
+    if (timer) {
+      await notificationService.showRunningTimerNotification(timer);
+    }
   };
 
-  const stopTimer = (id: string) => {
+  const stopTimer = async (id: string) => {
     dispatch({ type: 'STOP_TIMER', payload: id });
+    
+    // Cancel running timer notification
+    await notificationService.cancelRunningTimerNotification(id);
   };
 
   const value: AppContextType = {
