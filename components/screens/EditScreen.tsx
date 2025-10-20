@@ -1,11 +1,12 @@
 import { Trash2, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { Timer, TimerDuration } from '../../types';
 import { durationToMinutes, minutesToDuration } from '../../utils/timeUtils';
+import { validateRequiredName } from '../../utils/validation';
 import { DurationPicker } from '../ui/DurationPicker';
 import { FrequencyPicker } from '../ui/FrequencyPicker';
 import { Header } from '../ui/Header';
@@ -26,16 +27,38 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
   const [editedTimer, setEditedTimer] = useState<Timer>(timer);
   const [duration, setDuration] = useState<TimerDuration>(minutesToDuration(timer.duration));
   const [errors, setErrors] = useState<Partial<Timer>>({});
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const [toastMessage, setToastMessage] = useState<string>('');
 
   useEffect(() => {
     setDuration(minutesToDuration(timer.duration));
   }, [timer.duration]);
 
+  // Android back handler: go back to home (onClose)
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onClose]);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1500),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!editedTimer.name.trim()) {
-      newErrors.name = 'Timer name is required';
+    const nameError = validateRequiredName(editedTimer.name);
+    if (nameError) {
+      newErrors.name = nameError;
+      showToast(nameError);
     }
 
     const durationMinutes = durationToMinutes(duration);
@@ -138,6 +161,7 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
         isDark={isDark}
       />
 
+
       {/* Content */}
       <ScrollView style={designStyles.screen.content} showsVerticalScrollIndicator={false}>
         <View style={[designStyles.screen.formContent, { paddingTop: designStyles.spacing.xl }]}>
@@ -148,7 +172,13 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
             </Text>
             <Input
               value={editedTimer.name}
-              onChangeText={(text) => setEditedTimer({ ...editedTimer, name: text })}
+              onChangeText={(text) => {
+                setEditedTimer({ ...editedTimer, name: text });
+                if (errors.name) {
+                  const { name, ...rest } = errors as any;
+                  setErrors(rest);
+                }
+              }}
               placeholder="e.g., Morning Meditation"
               error={errors.name}
               style={StyleSheet.flatten([designStyles.screen.input, { backgroundColor: colors.inputBg, borderColor: colors.border }])}
@@ -235,12 +265,19 @@ export const EditScreen: React.FC<EditScreenProps> = ({ timer, onClose }) => {
         </View>
       </ScrollView>
 
+      {/* Floating Toast (same placement as CreateScreen) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.toast, { opacity: toastOpacity, backgroundColor: colors.surface, borderColor: colors.border }]}
+      >
+        <Text style={[styles.toastText, { color: colors.text }]}>{toastMessage}</Text>
+      </Animated.View>
+
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           onPress={handleSave}
           style={[styles.saveButton, { backgroundColor: colors.primary }]}
-          disabled={!editedTimer.name.trim()}
         >
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
@@ -421,6 +458,23 @@ const styles = StyleSheet.create({
     paddingBottom: designStyles.spacing.xl,
     paddingTop: designStyles.spacing.lg,
     borderTopWidth: 1,
+  },
+  toast: {
+    position: 'absolute',
+    left: designStyles.spacing.xxl,
+    right: designStyles.spacing.xxl,
+    bottom: 110,
+    paddingVertical: designStyles.spacing.md,
+    paddingHorizontal: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
+    alignItems: 'center',
+    zIndex: 1000,
+    ...designStyles.shadow.md,
+  },
+  toastText: {
+    fontSize: designStyles.fontSize.sm,
+    fontWeight: '600',
   },
   saveButton: {
     paddingVertical: designStyles.spacing.lg,

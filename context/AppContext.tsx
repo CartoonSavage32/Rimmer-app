@@ -46,8 +46,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_SCREEN':
-      return { 
-        ...state, 
+      return {
+        ...state,
         currentScreen: action.payload,
         navigationHistory: [...state.navigationHistory, action.payload]
       };
@@ -97,12 +97,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         timers: state.timers.map(timer =>
           timer.id === action.payload
-            ? { 
-                ...timer, 
-                isRunning: true, 
-                remainingTime: timer.duration * 60,
-                updatedAt: new Date()
-              }
+            ? {
+              ...timer,
+              isRunning: true,
+              remainingTime: timer.duration * 60,
+              updatedAt: new Date()
+            }
             : timer
         ),
       };
@@ -111,12 +111,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         timers: state.timers.map(timer =>
           timer.id === action.payload
-            ? { 
-                ...timer, 
-                isRunning: false, 
-                remainingTime: undefined,
-                updatedAt: new Date()
-              }
+            ? {
+              ...timer,
+              isRunning: false,
+              remainingTime: undefined,
+              updatedAt: new Date()
+            }
             : timer
         ),
       };
@@ -164,12 +164,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const interval = setInterval(() => {
       const runningTimers = state.timers.filter(timer => timer.isRunning);
-      
+
       if (runningTimers.length > 0) {
         const updatedTimers = state.timers.map(timer => {
           if (timer.isRunning && timer.remainingTime !== undefined) {
             const newRemainingTime = Math.max(0, timer.remainingTime - 1);
-            
+
             if (newRemainingTime === 0) {
               // Timer finished
               return {
@@ -179,7 +179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 updatedAt: new Date()
               };
             }
-            
+
             return {
               ...timer,
               remainingTime: newRemainingTime,
@@ -188,7 +188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           return timer;
         });
-        
+
         dispatch({ type: 'SET_TIMERS', payload: updatedTimers });
       }
     }, 1000);
@@ -216,7 +216,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadAppData = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       const [timersData, settingsData] = await Promise.all([
         AsyncStorage.getItem('timers'),
         AsyncStorage.getItem('settings'),
@@ -269,7 +269,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     dispatch({ type: 'ADD_TIMER', payload: timer });
-    
+
     try {
       await AsyncStorage.setItem('timers', JSON.stringify([...state.timers, timer]));
       await notificationService.scheduleTimerNotifications(timer);
@@ -281,7 +281,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTimer = async (timer: Timer) => {
     const updatedTimer = { ...timer, updatedAt: new Date() };
     dispatch({ type: 'UPDATE_TIMER', payload: updatedTimer });
-    
+
     try {
       const updatedTimers = state.timers.map(t => t.id === timer.id ? updatedTimer : t);
       await AsyncStorage.setItem('timers', JSON.stringify(updatedTimers));
@@ -293,7 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteTimer = async (id: string) => {
     dispatch({ type: 'DELETE_TIMER', payload: id });
-    
+
     try {
       const updatedTimers = state.timers.filter(t => t.id !== id);
       await AsyncStorage.setItem('timers', JSON.stringify(updatedTimers));
@@ -309,11 +309,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedTimer = { ...timer, enabled: !timer.enabled, updatedAt: new Date() };
     dispatch({ type: 'UPDATE_TIMER', payload: updatedTimer });
-    
+
     try {
       const updatedTimers = state.timers.map(t => t.id === id ? updatedTimer : t);
       await AsyncStorage.setItem('timers', JSON.stringify(updatedTimers));
-      
+
       if (updatedTimer.enabled) {
         await notificationService.scheduleTimerNotifications(updatedTimer);
       } else {
@@ -334,7 +334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setTheme = async (theme: Theme) => {
     dispatch({ type: 'SET_THEME', payload: theme });
-    
+
     try {
       const newSettings = { ...state.settings, theme };
       await AsyncStorage.setItem('settings', JSON.stringify(newSettings));
@@ -346,7 +346,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setTimeFormat = async (format: '12h' | '24h') => {
     const newSettings = { ...state.settings, timeFormat: format };
     dispatch({ type: 'SET_SETTINGS', payload: newSettings });
-    
+
     try {
       await AsyncStorage.setItem('settings', JSON.stringify(newSettings));
     } catch (error) {

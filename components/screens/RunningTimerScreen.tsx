@@ -4,7 +4,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedProps,
+  useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -22,8 +25,8 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
   timerId,
   onClose,
 }) => {
-  const { state, startTimer, stopTimer, setScreen } = useApp();
-  const { isDark, settings } = state;
+  const { state, startTimer, stopTimer } = useApp();
+  const { isDark } = state;
   const colors = getDesignColors(isDark);
 
   const timer = state.timers.find(t => t.id === timerId);
@@ -46,12 +49,14 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
 
   useEffect(() => {
     if (isRunning) {
-      const pulse = () => {
-        pulseScale.value = withTiming(1.05, { duration: 1000 }, () => {
-          pulseScale.value = withTiming(1, { duration: 1000 }, pulse);
-        });
-      };
-      pulse();
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 1000 }),
+          withTiming(1, { duration: 1000 })
+        ),
+        -1,
+        false
+      );
     } else {
       pulseScale.value = withTiming(1, { duration: 300 });
     }
@@ -67,7 +72,7 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
     };
   });
 
-  const animatedPulseStyle = useAnimatedProps(() => ({
+  const animatedPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
   }));
 
@@ -87,7 +92,6 @@ export const RunningTimerScreen: React.FC<RunningTimerScreenProps> = ({
 
   const handleClose = () => {
     onClose();
-    setScreen('home');
   };
 
   return (

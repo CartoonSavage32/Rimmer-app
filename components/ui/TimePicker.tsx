@@ -1,5 +1,5 @@
 import { Clock } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designStyles, getDesignColors } from '../../constants/design';
@@ -31,58 +31,51 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const colors = getDesignColors(isDark);
   const insets = useSafeAreaInsets();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  // Always keep the source of truth as 24h string (HH:MM)
   const [selectedTime, setSelectedTime] = useState(time);
-  const [selectedHours, setSelectedHours] = useState(0);
+  const [selectedHours24, setSelectedHours24] = useState(0);
   const [selectedMinutes, setSelectedMinutes] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
+  const [selectedDisplayHour12, setSelectedDisplayHour12] = useState<number>(12);
 
   const hoursScrollRef = useRef<ScrollView>(null);
   const minutesScrollRef = useRef<ScrollView>(null);
   const periodScrollRef = useRef<ScrollView>(null);
 
-  const parseTime = (timeStr: string) => {
-    const [timePart, period] = timeStr.split(' ');
-    const [hours, minutes] = timePart.split(':').map(Number);
-    return { hours, minutes, period: period as 'AM' | 'PM' };
+  const parse24h = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return { hours: Number.isFinite(hours) ? hours : 0, minutes: Number.isFinite(minutes) ? minutes : 0 };
   };
 
-  const formatTime = (hours: number, minutes: number, period?: string) => {
+  const to24hString = (hours24: number, minutes: number) => `${hours24.toString().padStart(2, '0')}:${minutes
+    .toString()
+    .padStart(2, '0')}`;
+
+  const displayLabel = useMemo(() => {
+    // For button text: format according to prop timeFormat, but based on 24h selectedTime
+    const [h, m] = selectedTime.split(':').map(n => parseInt(n, 10));
     if (timeFormat === '12h') {
-      const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period || 'AM'}`;
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      return `${hour12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
     }
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  };
+    return to24hString(h, m);
+  }, [selectedTime, timeFormat]);
 
   useEffect(() => {
     if (isModalVisible) {
-      const { hours, minutes, period } = parseTime(selectedTime);
-      setSelectedHours(hours);
+      const { hours, minutes } = parse24h(selectedTime);
+      setSelectedHours24(hours);
       setSelectedMinutes(minutes);
-      setSelectedPeriod(period || 'AM');
+      const period = hours < 12 ? 'AM' : 'PM';
+      setSelectedPeriod(period);
+      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      setSelectedDisplayHour12(displayHour);
     }
   }, [isModalVisible, selectedTime]);
 
-  const handleTimeSelect = (hours: number, minutes: number, period?: 'AM' | 'PM') => {
-    let finalHours = hours;
-    let finalPeriod = period || 'AM';
-
-    if (timeFormat === '12h') {
-      if (hours === 0) {
-        finalHours = 12;
-        finalPeriod = 'AM';
-      } else if (hours < 12) {
-        finalPeriod = 'AM';
-      } else if (hours === 12) {
-        finalPeriod = 'PM';
-      } else {
-        finalHours = hours - 12;
-        finalPeriod = 'PM';
-      }
-    }
-
-    const newTime = formatTime(finalHours, minutes, finalPeriod);
-    setSelectedTime(newTime);
+  const handleTimeSelect24 = (hours24: number, minutes: number) => {
+    setSelectedTime(to24hString(hours24, minutes));
   };
 
   const handleConfirm = () => {
@@ -95,13 +88,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     setIsModalVisible(false);
   };
 
-  const generateNumbers = (max: number, isHours = false) => {
-    const numbers = [];
-    for (let i = 0; i <= max; i++) {
-      numbers.push(i);
-    }
-    // Add extra items for infinite scroll
-    return [...numbers, ...numbers, ...numbers];
+  const generateNumbers = (min: number, max: number) => {
+    const nums: number[] = [];
+    for (let i = min; i <= max; i++) nums.push(i);
+    return [...nums, ...nums, ...nums];
   };
 
   const generatePeriods = () => {
@@ -114,17 +104,31 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       const index = Math.round(offsetY / ITEM_HEIGHT);
       
       if (type === 'hours') {
-        const hours = index % (timeFormat === '12h' ? 12 : 24);
-        setSelectedHours(hours);
-        handleTimeSelect(hours, selectedMinutes, selectedPeriod);
+        if (timeFormat === '12h') {
+          const base = 12;
+          const displayHour = ((index % base) + base) % base; // 0..11
+          const hour12 = displayHour === 0 ? 12 : displayHour; // 1..12
+          setSelectedDisplayHour12(hour12);
+          const h24 = hour12 % 12 + (selectedPeriod === 'PM' ? 12 : 0);
+          setSelectedHours24(h24);
+          handleTimeSelect24(h24, selectedMinutes);
+        } else {
+          const base = 24;
+          const h24 = ((index % base) + base) % base; // 0..23
+          setSelectedHours24(h24);
+          handleTimeSelect24(h24, selectedMinutes);
+        }
       } else if (type === 'minutes') {
-        const minutes = index % 60;
+        const base = 60;
+        const minutes = ((index % base) + base) % base;
         setSelectedMinutes(minutes);
-        handleTimeSelect(selectedHours, minutes, selectedPeriod);
+        handleTimeSelect24(selectedHours24, minutes);
       } else if (type === 'period') {
         const period = index % 2 === 0 ? 'AM' : 'PM';
         setSelectedPeriod(period);
-        handleTimeSelect(selectedHours, selectedMinutes, period);
+        const h24 = selectedDisplayHour12 % 12 + (period === 'PM' ? 12 : 0);
+        setSelectedHours24(h24);
+        handleTimeSelect24(h24, selectedMinutes);
       }
     };
   };
@@ -140,16 +144,16 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     if (isModalVisible) {
       setTimeout(() => {
         if (timeFormat === '12h') {
-          const hoursIndex = selectedHours === 0 ? 12 : selectedHours;
-          scrollToIndex(hoursScrollRef, hoursIndex - 1, 12);
+          const hourIndex = (selectedDisplayHour12 % 12) || 12;
+          scrollToIndex(hoursScrollRef, hourIndex - 1, 12);
         } else {
-          scrollToIndex(hoursScrollRef, selectedHours, 24);
+          scrollToIndex(hoursScrollRef, selectedHours24, 24);
         }
         scrollToIndex(minutesScrollRef, selectedMinutes, 60);
         scrollToIndex(periodScrollRef, selectedPeriod === 'AM' ? 0 : 1, 2);
       }, 100);
     }
-  }, [isModalVisible, timeFormat]);
+  }, [isModalVisible, timeFormat, selectedDisplayHour12, selectedHours24, selectedMinutes, selectedPeriod]);
 
   const renderScrollWheel = (
     data: (string | number)[],
@@ -184,8 +188,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     </View>
   );
 
-  const hours = generateNumbers(timeFormat === '12h' ? 12 : 24, true);
-  const minutes = generateNumbers(59);
+  const hours = useMemo(() => (timeFormat === '12h'
+    ? generateNumbers(1, 12)
+    : generateNumbers(0, 23)), [timeFormat]);
+  const minutes = useMemo(() => generateNumbers(0, 59), []);
   const periods = generatePeriods();
 
   return (
@@ -195,7 +201,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
         style={[styles.timeButton, { backgroundColor: colors.inputBg }]}
       >
         <Clock size={20} color={colors.text} />
-        <Text style={[styles.timeText, { color: colors.text }]}>{time}</Text>
+        <Text style={[styles.timeText, { color: colors.text }]}>{displayLabel}</Text>
       </TouchableOpacity>
 
       <Modal
@@ -225,7 +231,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             <View style={styles.timeWheels}>
               {renderScrollWheel(
                 hours,
-                selectedHours,
+                selectedHours24,
                 handleScroll(hoursScrollRef, 'hours'),
                 'Hour',
                 hoursScrollRef

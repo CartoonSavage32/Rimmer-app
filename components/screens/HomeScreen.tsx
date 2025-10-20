@@ -21,6 +21,8 @@ export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const colors = getDesignColors(isDark);
+  // Dynamic bottom padding so the bottom nav sits neatly above system bars
+  const bottomPad = Math.max(insets.bottom, designStyles.spacing.sm);
 
   const handleEditTimer = (timer: Timer) => {
     if (timer.isRunning) {
@@ -173,7 +175,7 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: colors.surface, paddingBottom: insets.bottom }]}>
+      <View style={[styles.bottomNav, { backgroundColor: colors.surface, paddingBottom: bottomPad }]}>
         <View style={styles.navButtons}>
           <TouchableOpacity
             onPress={() => setActiveTab('timers')}
@@ -229,7 +231,7 @@ export const HomeScreen: React.FC = () => {
       {activeTab === 'timers' && (
         <TouchableOpacity
           onPress={() => setScreen('create')}
-          style={[styles.fab, { backgroundColor: colors.accent, bottom: insets.bottom + 80 }]}
+          style={[styles.fab, { backgroundColor: colors.accent, bottom: insets.bottom + 90 }]}
         >
           <Plus size={24} color="#FFFFFF" />
         </TouchableOpacity>

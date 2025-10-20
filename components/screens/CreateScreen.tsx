@@ -1,10 +1,11 @@
 import { Plus, X } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { designStyles, getDesignColors } from '../../constants/design';
 import { useApp } from '../../context/AppContext';
 import { NewTimer, TimerDuration } from '../../types';
 import { durationToMinutes, minutesToDuration } from '../../utils/timeUtils';
+import { validateRequiredName } from '../../utils/validation';
 import { DurationPicker } from '../ui/DurationPicker';
 import { FrequencyPicker } from '../ui/FrequencyPicker';
 import { Header } from '../ui/Header';
@@ -15,6 +16,8 @@ export const CreateScreen: React.FC = () => {
   const { state, addTimer, setScreen, setTimeFormat } = useApp();
   const { isDark, settings } = state;
   const colors = getDesignColors(isDark);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const [toastMessage, setToastMessage] = useState<string>('');
 
   const [newTimer, setNewTimer] = useState<NewTimer>({
     name: '',
@@ -28,11 +31,22 @@ export const CreateScreen: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<NewTimer>>({});
 
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1800),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!newTimer.name.trim()) {
-      newErrors.name = 'Timer name is required';
+    const nameError = validateRequiredName(newTimer.name);
+    if (nameError) {
+      newErrors.name = nameError;
+      showToast(nameError);
     }
 
     const durationMinutes = durationToMinutes(duration);
@@ -122,7 +136,14 @@ export const CreateScreen: React.FC = () => {
             </Text>
             <Input
               value={newTimer.name}
-              onChangeText={(text) => setNewTimer({ ...newTimer, name: text })}
+              onChangeText={(text) => {
+                setNewTimer({ ...newTimer, name: text });
+                if (errors.name) {
+                  // clear field error on user input
+                  const { name, ...rest } = errors as any;
+                  setErrors(rest);
+                }
+              }}
               placeholder="e.g., Morning Meditation"
               error={errors.name}
               style={StyleSheet.flatten([designStyles.screen.input, { backgroundColor: colors.inputBg, borderColor: colors.border }])}
@@ -174,7 +195,7 @@ export const CreateScreen: React.FC = () => {
                   )}
                 </View>
               ))}
-              
+
               <TouchableOpacity
                 onPress={handleAddTime}
                 style={[styles.addTimeButton, { borderColor: colors.border }]}
@@ -201,12 +222,26 @@ export const CreateScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      {/* Inline Toast */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.toast,
+          {
+            opacity: toastOpacity,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Text style={[styles.toastText, { color: colors.text }]}>{toastMessage}</Text>
+      </Animated.View>
+
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <TouchableOpacity
           onPress={handleCreate}
           style={[styles.createButton, { backgroundColor: colors.primary }]}
-          disabled={!newTimer.name.trim()}
         >
           <Text style={styles.createButtonText}>Create Timer</Text>
         </TouchableOpacity>
@@ -316,11 +351,40 @@ const styles = StyleSheet.create({
     fontSize: designStyles.fontSize.md,
     fontWeight: '600',
   },
+  toast: {
+    position: 'absolute',
+    left: designStyles.spacing.xxl,
+    right: designStyles.spacing.xxl,
+    bottom: 110, // sits just above footer button
+    paddingVertical: designStyles.spacing.md,
+    paddingHorizontal: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.xl,
+    borderWidth: 1,
+    alignItems: 'center',
+    zIndex: 1000,
+    ...designStyles.shadow.md,
+  },
+  toastText: {
+    fontSize: designStyles.fontSize.sm,
+    fontWeight: '600',
+  },
   footer: {
     paddingHorizontal: designStyles.spacing.xxl,
     paddingBottom: designStyles.spacing.xl,
     paddingTop: designStyles.spacing.lg,
     borderTopWidth: 1,
+  },
+  footerToast: {
+    paddingVertical: designStyles.spacing.sm,
+    paddingHorizontal: designStyles.spacing.lg,
+    borderRadius: designStyles.borderRadius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: designStyles.spacing.md,
+  },
+  footerToastText: {
+    fontSize: designStyles.fontSize.sm,
+    fontWeight: '600',
   },
   createButton: {
     paddingVertical: designStyles.spacing.lg,

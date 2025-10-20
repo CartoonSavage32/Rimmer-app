@@ -17,12 +17,13 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
 }) => {
   const colors = getDesignColors(isDark);
   const screenWidth = Dimensions.get('window').width;
-  
-  // Calculate dynamic sizes based on screen width
-  const availableWidth = screenWidth - (designStyles.spacing.lg * 2) - (designStyles.spacing.sm * 2); // Account for padding and gaps
-  const columnWidth = Math.max(80, availableWidth / 3 - designStyles.spacing.sm);
-  const inputWidth = Math.max(60, columnWidth - 20); // Leave some margin
-  const buttonSize = Math.max(35, Math.min(45, inputWidth * 0.7));
+
+  // Calculate dynamic sizes based on screen width, while clamping so the layout stays compact
+  const availableWidth = screenWidth - (designStyles.spacing.xxxl * 2) - (designStyles.spacing.xxxl * 2);
+  const baseColumn = availableWidth / 3;
+  const columnWidth = Math.min(120, Math.max(84, baseColumn));
+  const inputWidth = Math.max(64, columnWidth - 22);
+  const buttonSize = Math.max(36, Math.min(44, inputWidth * 0.68));
 
   const updateDuration = (field: 'hours' | 'minutes' | 'seconds', value: number) => {
     const newDuration = { ...duration, [field]: Math.max(0, value) };
@@ -49,12 +50,12 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
   const renderTimeControl = (field: 'hours' | 'minutes' | 'seconds', label: string) => (
     <View style={[styles.timeColumn, { width: columnWidth }]}>
       <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>{label}</Text>
-      
+
       <TouchableOpacity
         onPress={() => increment(field)}
         style={[
-          styles.controlButton, 
-          { 
+          styles.controlButton,
+          {
             backgroundColor: colors.inputBg,
             width: buttonSize,
             height: buttonSize,
@@ -70,10 +71,10 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
         onChangeText={(value) => handleInputChange(field, value)}
         keyboardType="numeric"
         style={StyleSheet.flatten([
-          styles.timeInput, 
-          { 
-            backgroundColor: colors.inputBg, 
-            color: colors.text, 
+          styles.timeInput,
+          {
+            backgroundColor: colors.inputBg,
+            color: colors.text,
             textAlign: 'center',
             width: inputWidth,
             height: buttonSize + 5
@@ -84,8 +85,8 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
       <TouchableOpacity
         onPress={() => decrement(field)}
         style={[
-          styles.controlButton, 
-          { 
+          styles.controlButton,
+          {
             backgroundColor: colors.inputBg,
             width: buttonSize,
             height: buttonSize,
@@ -106,7 +107,7 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
         </Text>
       </View>
 
-      <View style={styles.controlsContainer}>
+      <View style={[styles.controlsContainer, { maxWidth: Math.min(520, screenWidth - designStyles.spacing.lg * 2) }]}>
         {renderTimeControl('hours', 'Hours')}
         {renderTimeControl('minutes', 'Minutes')}
         {renderTimeControl('seconds', 'Seconds')}
@@ -118,11 +119,13 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
 const styles = StyleSheet.create({
   container: {
     gap: designStyles.spacing.lg,
+    alignItems: 'center',
   },
   durationDisplay: {
     padding: designStyles.spacing.xxl,
     borderRadius: designStyles.borderRadius.xl,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
   durationText: {
     fontSize: designStyles.fontSize.xxxl,
@@ -131,9 +134,10 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingHorizontal: designStyles.spacing.sm,
+    paddingHorizontal: designStyles.spacing.lg,
+    gap: designStyles.spacing.xl,
   },
   timeColumn: {
     alignItems: 'center',
@@ -155,5 +159,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingHorizontal: designStyles.spacing.sm,
+    marginTop: designStyles.spacing.lg,
   },
 });

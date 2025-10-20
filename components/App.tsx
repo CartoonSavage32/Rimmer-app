@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { BackHandler, StatusBar, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { notificationService } from '../services/NotificationService';
 import { CreateScreen } from './screens/CreateScreen';
@@ -10,7 +10,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 export const App: React.FC = () => {
   const { state, navigateBack } = useApp();
   const { currentScreen, isDark, isLoading, navigationHistory } = state;
-  const insets = useSafeAreaInsets();
+  
   const backPressCount = useRef(0);
   const backPressTimeout = useRef<NodeJS.Timeout | null>(null);
 
